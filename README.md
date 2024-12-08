@@ -1,6 +1,6 @@
-# 42 AOC Data Analyzer
+# 42 AOC 2024 Spain Data Analyzer
 
-A data analysis tool for 42 Barcelona's Advent of Code rankings.
+A data analysis tool for 42 Spain Advent of Code rankings.
 
 ## Features
 
