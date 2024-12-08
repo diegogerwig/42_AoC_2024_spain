@@ -4,18 +4,18 @@ requests==2.31.0
 python-dotenv==1.0.0
 
 # Data processing and analysis
-numpy==1.24.3
-pandas==2.0.2
-setuptools==69.1.1  # Adding explicit version
+numpy>=1.26.0  # Updated for Python 3.12 compatibility
+pandas>=2.1.0  # Updated for newer numpy
+setuptools>=69.0.0
 
 # Visualization
-matplotlib==3.7.1
-seaborn==0.12.2
+matplotlib>=3.8.0  # Updated for Python 3.12
+seaborn>=0.13.0
 plotly==5.18.0
-streamlit==1.24.0
+streamlit>=1.29.0  # Latest version for better compatibility
 
 # Development and testing
-pytest==8.3.0  # Changed from 8.3.4 as it might be too new
-pytest-cov==4.1.0  # Changed from 6.0.0 to a more stable version
+pytest==8.3.0
+pytest-cov==4.1.0
 black==23.12.0
 pylint==3.0.3
