@@ -6,7 +6,7 @@ requests==2.31.0
 python-dotenv==1.0.0
 
 # Data processing
-numpy==1.22.4
+numpy==1.21.6
 pandas==1.5.3
 
 # Visualization
