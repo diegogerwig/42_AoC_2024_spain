@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -6,10 +7,10 @@ from src.scraper import AOCScraper
 
 # Define campus color mapping
 CAMPUS_COLORS = {
-    'UDZ': '#00FF00',  # Green
-    'BCN': '#FFD700',  # Yellow
-    'MAL': '#00FFFF',  # Cyan
-    'MAD': '#FF00FF'   # Magenta
+    'UDZ': '#98FB98',  # Pale Green
+    'BCN': '#FFD700',  # Gold
+    'MAL': '#00CED1',  # Turquoise
+    'MAD': '#FF69B4'   # Pink
 }
 
 def load_data():
@@ -36,9 +37,9 @@ def show_campus_summary(df):
             'Max Points': f"{campus_data['points'].max():.1f}",
             'Avg Streak': f"{campus_data['streak'].mean():.1f}",
             'Max Streak': int(campus_data['streak'].max()),
-            'Avg Days': f"{campus_data['completed_days'].mean():.1f}",
             'Total Gold': int(campus_data['gold_stars'].sum()),
-            'Total Silver': int(campus_data['silver_stars'].sum())
+            'Total Silver': int(campus_data['silver_stars'].sum()),
+            'Completion Rate': f"{(campus_data['total_stars'].sum() / (len(campus_data) * 50)) * 100:.1f}%"
         }
         campus_metrics.append(metrics)
     
@@ -54,36 +55,37 @@ def show_campus_summary(df):
             'Max Points': st.column_config.Column(width='small'),
             'Avg Streak': st.column_config.Column(width='small'),
             'Max Streak': st.column_config.NumberColumn(width='small'),
-            'Avg Days': st.column_config.Column(width='small'),
             'Total Gold': st.column_config.NumberColumn(width='small'),
-            'Total Silver': st.column_config.NumberColumn(width='small')
+            'Total Silver': st.column_config.NumberColumn(width='small'),
+            'Completion Rate': st.column_config.Column(width='small')
         }
     )
 
-def plot_streak_distribution(df):
-    """Create interactive histogram for streak distribution"""
-    fig = px.histogram(
-        df,
-        x="streak",
-        color="campus",
-        color_discrete_map=CAMPUS_COLORS,
-        title="Streak Distribution by Campus",
-        labels={
-            "streak": "Streak",
-            "count": "Number of Users",
-            "campus": "Campus"
+def plot_stars_distribution(df):
+    """Plot distribution of gold and silver stars"""
+    fig = px.box(
+        pd.melt(
+            df,
+            value_vars=['gold_stars', 'silver_stars'],
+            var_name='star_type',
+            value_name='count'
+        ),
+        x='star_type',
+        y='count',
+        color='star_type',
+        points='all',
+        color_discrete_map={
+            'gold_stars': '#FFD700',
+            'silver_stars': '#C0C0C0'
         },
-        marginal="box"
+        title='Stars Distribution',
+        labels={
+            'star_type': 'Star Type',
+            'count': 'Number of Stars'
+        }
     )
     
-    fig.update_layout(
-        height=500,
-        title_x=0.5,
-        barmode='overlay'
-    )
-    
-    fig.update_traces(opacity=0.75)
-    
+    fig.update_layout(height=500, title_x=0.5)
     return fig
 
 def plot_points_vs_days(df):
@@ -93,28 +95,24 @@ def plot_points_vs_days(df):
         x="completed_days",
         y="points",
         color="campus",
-        size="streak",
-        hover_data=["login"],
+        size="total_stars",
+        hover_data=["login", "gold_stars", "silver_stars"],
         color_discrete_map=CAMPUS_COLORS,
-        title="Points vs Completed Days by Campus",
+        title="Points vs Days with Stars",
         labels={
-            "completed_days": "Completed Days",
+            "completed_days": "Days with Stars",
             "points": "Points",
             "campus": "Campus",
-            "streak": "Streak",
+            "total_stars": "Total Stars",
             "login": "User"
         }
     )
     
-    fig.update_layout(
-        height=500,
-        title_x=0.5,
-    )
-    
+    fig.update_layout(height=500, title_x=0.5)
     return fig
 
 def plot_completion_rate(df):
-    """Create completion rate over time visualization"""
+    """Create completion rate visualization"""
     day_columns = [col for col in df.columns if col.startswith('day_')]
     completion_data = []
     
@@ -122,13 +120,15 @@ def plot_completion_rate(df):
         campus_data = df[df['campus'] == campus]
         for day in day_columns:
             day_num = int(day.split('_')[1])
-            completed = (campus_data[day] > 0).sum()
-            rate = (completed / len(campus_data)) * 100
-            completion_data.append({
-                'Day': day_num,
-                'Rate': rate,
-                'Campus': campus
-            })
+            silver = (campus_data[day] >= 1).sum()
+            gold = (campus_data[day] == 2).sum()
+            total_users = len(campus_data)
+            silver_rate = (silver / total_users) * 100
+            gold_rate = (gold / total_users) * 100
+            completion_data.extend([
+                {'Day': day_num, 'Rate': silver_rate, 'Type': 'Silver', 'Campus': campus},
+                {'Day': day_num, 'Rate': gold_rate, 'Type': 'Gold', 'Campus': campus}
+            ])
     
     completion_df = pd.DataFrame(completion_data)
     
@@ -137,12 +137,14 @@ def plot_completion_rate(df):
         x='Day',
         y='Rate',
         color='Campus',
+        line_dash='Type',
         color_discrete_map=CAMPUS_COLORS,
-        title='Daily Completion Rate by Campus',
+        title='Daily Star Completion Rate by Campus',
         labels={
             'Day': 'Challenge Day',
             'Rate': 'Completion Rate (%)',
-            'Campus': 'Campus'
+            'Campus': 'Campus',
+            'Type': 'Star Type'
         }
     )
     
@@ -155,76 +157,70 @@ def plot_completion_rate(df):
     
     return fig
 
-def plot_time_investment(df):
-    """Create time investment analysis plot"""
-    fig = px.scatter(
-        df,
-        x="completed_days",
-        y="points",
-        color="campus",
-        trendline="ols",
-        color_discrete_map=CAMPUS_COLORS,
-        title="Time Investment Analysis",
-        labels={
-            "completed_days": "Days Completed",
-            "points": "Points",
-            "campus": "Campus"
-        }
-    )
+def plot_campus_progress(df):
+    """Create campus progress visualization"""
+    campus_stats = df.groupby('campus').agg({
+        'points': 'mean',
+        'streak': 'mean',
+        'completed_days': 'mean',
+        'gold_stars': 'mean',
+        'silver_stars': 'mean'
+    }).round(2)
+    
+    fig = go.Figure()
+    
+    for campus in campus_stats.index:
+        fig.add_trace(go.Scatterpolar(
+            r=campus_stats.loc[campus],
+            theta=campus_stats.columns,
+            name=campus,
+            line_color=CAMPUS_COLORS.get(campus, '#808080')
+        ))
     
     fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, showticklabels=True)),
+        showlegend=True,
+        title='Campus Performance Overview',
         height=500,
-        title_x=0.5,
+        title_x=0.5
     )
     
     return fig
 
-def plot_campus_progress(df):
-    """Create campus progress visualization"""
-    campus_stats = df.groupby('campus').agg({
-        'points': ['mean', 'max'],
-        'streak': ['mean', 'max'],
-        'completed_days': ['mean', 'count']
-    }).round(2)
+def plot_completion_heatmap(df):
+    """Create challenge completion heatmap"""
+    day_columns = [col for col in df.columns if col.startswith('day_')]
+    completion_matrix = df[day_columns].values
     
-    campus_stats.columns = ['avg_points', 'max_points', 'avg_streak', 
-                          'max_streak', 'avg_days', 'total_users']
-    campus_stats = campus_stats.reset_index()
-    
-    fig = go.Figure()
-    
-    for campus in campus_stats['campus']:
-        campus_data = campus_stats[campus_stats['campus'] == campus]
-        fig.add_trace(go.Scatterpolar(
-            r=[
-                campus_data['avg_points'].iloc[0],
-                campus_data['avg_streak'].iloc[0],
-                campus_data['avg_days'].iloc[0],
-                campus_data['total_users'].iloc[0]
-            ],
-            theta=['Avg Points', 'Avg Streak', 'Avg Days', 'Total Users'],
-            name=campus,
-            line_color=CAMPUS_COLORS[campus]
-        ))
+    fig = go.Figure(data=go.Heatmap(
+        z=completion_matrix.T,
+        colorscale=[
+            [0, 'white'],      # No stars
+            [0.5, '#C0C0C0'],  # Silver stars
+            [1, '#FFD700']     # Gold stars
+        ],
+        zmin=0,
+        zmax=2,
+        showscale=True,
+        colorbar=dict(
+            ticktext=['No Stars', 'Silver Star', 'Gold Stars'],
+            tickvals=[0, 1, 2],
+            tickmode='array'
+        )
+    ))
     
     fig.update_layout(
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, max(campus_stats['avg_points'].max(),
-                             campus_stats['avg_streak'].max(),
-                             campus_stats['avg_days'].max(),
-                             campus_stats['total_users'].max())]
-            )),
-        showlegend=True,
-        title='Campus Performance Overview',
-        height=500
+        title='Challenge Completion Status',
+        xaxis_title='Participant Index',
+        yaxis_title='Day',
+        height=600,
+        title_x=0.5
     )
     
     return fig
 
 def plot_points_distribution(df):
-    """Create points distribution visualization"""
+    """Create points distribution visualization by campus"""
     fig = px.box(
         df,
         x="campus",
@@ -238,10 +234,30 @@ def plot_points_distribution(df):
             "points": "Points"
         }
     )
+
+    # Add median line
+    fig.add_hline(
+        y=df['points'].median(),
+        line_dash="dash",
+        line_color="gray",
+        annotation_text=f"Global Median: {df['points'].median():.1f}"
+    )
     
     fig.update_layout(
         height=500,
         title_x=0.5,
+        showlegend=False,
+        xaxis_title="Campus",
+        yaxis_title="Points"
+    )
+    
+    # Personalizar el hover
+    fig.update_traces(
+        hovertemplate="<br>".join([
+            "Campus: %{x}",
+            "Points: %{y:.1f}",
+            "<extra></extra>"
+        ])
     )
     
     return fig
@@ -257,11 +273,26 @@ def apply_filters(df):
     # Points range filter
     points_range = st.sidebar.slider(
         "🎮 Points Range",
-        min_value=int(df["points"].min()),
-        max_value=int(df["points"].max()),
-        value=(int(df["points"].min()), int(df["points"].max()))
+        min_value=float(df["points"].min()),
+        max_value=float(df["points"].max()),
+        value=(float(df["points"].min()), float(df["points"].max()))
     )
     
+    # Star filters
+    gold_range = st.sidebar.slider(
+        "⭐ Gold Stars",
+        min_value=int(df["gold_stars"].min()),
+        max_value=int(df["gold_stars"].max()),
+        value=(int(df["gold_stars"].min()), int(df["gold_stars"].max()))
+    )
+    
+    silver_range = st.sidebar.slider(
+        "🌟 Silver Stars",
+        min_value=int(df["silver_stars"].min()),
+        max_value=int(df["silver_stars"].max()),
+        value=(int(df["silver_stars"].min()), int(df["silver_stars"].max()))
+    )
+
     # Streak range filter
     streak_range = st.sidebar.slider(
         "🔥 Streak Range",
@@ -272,41 +303,14 @@ def apply_filters(df):
 
     # Completed days filter
     days_range = st.sidebar.slider(
-        "📅 Completed Days Range",
+        "📅 Days with Stars",
         min_value=int(df["completed_days"].min()),
         max_value=int(df["completed_days"].max()),
         value=(int(df["completed_days"].min()), int(df["completed_days"].max()))
     )
 
-    # Gold stars filter
-    gold_range = st.sidebar.slider(
-        "⭐ Gold Stars Range",
-        min_value=int(df["gold_stars"].min()),
-        max_value=int(df["gold_stars"].max()),
-        value=(int(df["gold_stars"].min()), int(df["gold_stars"].max()))
-    )
-
-    # Silver stars filter
-    silver_range = st.sidebar.slider(
-        "🌟 Silver Stars Range",
-        min_value=int(df["silver_stars"].min()),
-        max_value=int(df["silver_stars"].max()),
-        value=(int(df["silver_stars"].min()), int(df["silver_stars"].max()))
-    )
-
     # Search by login
     search_login = st.sidebar.text_input("🔍 Search by Login").strip().lower()
-
-    # Sort options
-    st.sidebar.subheader("📊 Sort Options")
-    sort_by = st.sidebar.selectbox(
-        "Sort by",
-        ["Points", "Streak", "Completed Days", "Gold Stars", "Silver Stars"]
-    )
-    sort_order = st.sidebar.radio(
-        "Order",
-        ["Descending", "Ascending"]
-    )
 
     # Apply filters
     mask = (
@@ -324,53 +328,30 @@ def apply_filters(df):
         mask = mask & (df["login"].str.lower().str.contains(search_login))
     
     filtered_df = df[mask].copy()
-
+    
+    # Sort options
+    st.sidebar.subheader("📊 Sort Options")
+    sort_by = st.sidebar.selectbox(
+        "Sort by",
+        ["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days with Stars"]
+    )
+    sort_order = st.sidebar.radio("Order", ["Descending", "Ascending"])
+    
     # Apply sorting
     sort_column = sort_by.lower().replace(" ", "_")
     ascending = sort_order == "Ascending"
     filtered_df = filtered_df.sort_values(sort_column, ascending=ascending).reset_index(drop=True)
 
-    # Add filter summary to sidebar
+    # Filter summary
     st.sidebar.markdown("---")
     st.sidebar.subheader("📈 Filter Summary")
     st.sidebar.write(f"Showing {len(filtered_df)} of {len(df)} users")
-    if len(filtered_df) < len(df):
-        st.sidebar.write("Active filters:")
-        if selected_campus != "All":
-            st.sidebar.write(f"• Campus: {selected_campus}")
-        if search_login:
-            st.sidebar.write(f"• Login search: {search_login}")
-        if points_range != (df["points"].min(), df["points"].max()):
-            st.sidebar.write(f"• Points filter active")
-        if streak_range != (df["streak"].min(), df["streak"].max()):
-            st.sidebar.write(f"• Streak filter active")
-        if days_range != (df["completed_days"].min(), df["completed_days"].max()):
-            st.sidebar.write(f"• Days filter active")
-        if gold_range != (df["gold_stars"].min(), df["gold_stars"].max()):
-            st.sidebar.write(f"• Gold stars filter active")
-        if silver_range != (df["silver_stars"].min(), df["silver_stars"].max()):
-            st.sidebar.write(f"• Silver stars filter active")
-
+    
     # Reset filters button
     if st.sidebar.button("🔄 Reset All Filters"):
         st.experimental_rerun()
     
     return filtered_df
-
-def create_header():
-    """Create header with logo and title"""
-    col1, col2 = st.columns([1, 4])
-    
-    with col1:
-        try:
-            with open("img/42_logo.svg", "r") as f:
-                svg_content = f.read().strip()
-            st.markdown(f'<div style="padding: 10px;"><style>svg {{ width: 100px; height: auto; }} svg path, svg * {{ fill: white !important; stroke: white !important; }}</style>{svg_content}</div>', unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Error loading logo: {str(e)}")
-    
-    with col2:
-        st.title("💫 42 Spain Advent of Code 2024 Analysis 📊")
 
 def main():
     # Page configuration
@@ -380,7 +361,7 @@ def main():
     )
     
     # Header
-    create_header()
+    st.title("💫 42 Spain Advent of Code 2024 Analysis 📊")
     
     # Load data
     df = load_data()
@@ -394,58 +375,43 @@ def main():
     # Show global metrics
     st.markdown("---")
     st.subheader("🎯 Global Metrics")
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("Total Users", len(filtered_df))
     with col2:
         st.metric("Average Points", f"{filtered_df['points'].mean():.1f}")
     with col3:
-        st.metric("Max Streak", int(filtered_df['streak'].max()))
+        st.metric("Gold Stars", int(filtered_df['gold_stars'].sum()))
     with col4:
-        st.metric("Average Days Completed", f"{filtered_df['completed_days'].mean():.1f}")
+        st.metric("Silver Stars", int(filtered_df['silver_stars'].sum()))
+    with col5:
+        completion_rate = (filtered_df['total_stars'].sum() / (len(filtered_df) * 50)) * 100
+        st.metric("Completion Rate", f"{completion_rate:.1f}%")
     
     # Display visualizations in tabs
     st.markdown("---")
-    tab1, tab2, tab3 = st.tabs(["📈 Main Metrics", "🌟 Progress Analysis", "📊 Campus Comparison"])
+    tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
     
     with tab1:
         col1, col2 = st.columns(2)
         with col1:
-            try:
-                st.plotly_chart(plot_streak_distribution(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in streak distribution: {e}")
+            st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
         with col2:
-            try:
-                st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in points vs days: {e}")
+            st.plotly_chart(plot_completion_heatmap(filtered_df), use_container_width=True)
     
     with tab2:
         col1, col2 = st.columns(2)
         with col1:
-            try:
-                st.plotly_chart(plot_completion_rate(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in completion rate: {e}")
+            st.plotly_chart(plot_completion_rate(filtered_df), use_container_width=True)
         with col2:
-            try:
-                st.plotly_chart(plot_time_investment(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in time investment: {e}")
+            st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
     
     with tab3:
         col1, col2 = st.columns(2)
         with col1:
-            try:
-                st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in campus progress: {e}")
+            st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
         with col2:
-            try:
-                st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
-            except Exception as e:
-                st.error(f"Error in points distribution: {e}")
+            st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
             
     # Show filtered data table
     st.markdown("---")
@@ -457,23 +423,9 @@ def main():
             "streak": st.column_config.NumberColumn(format="%d"),
             "completed_days": st.column_config.NumberColumn(format="%d"),
             "gold_stars": st.column_config.NumberColumn(format="%d"),
-            "silver_stars": st.column_config.NumberColumn(format="%d")
+            "silver_stars": st.column_config.NumberColumn(format="%d"),
+            "total_stars": st.column_config.NumberColumn(format="%d")
         },
         hide_index=False,
         height=400
     )
-
-    # Footer
-    st.markdown(
-        """
-        ---
-        <div style="text-align: center; font-size: 1.1em; padding: 8px; background-color: #333; color: #fff; border-radius: 4px;">
-            Developed by <a href="https://github.com/diegogerwig" target="_blank" style="color: #fff;"><img src="https://github.com/fluidicon.png" height="16" style="vertical-align:middle; padding-right: 4px;"/>Diego Gerwig</a> |
-            <a href="https://profile.intra.42.fr/users/dgerwig-" target="_blank" style="color: #fff;"><img src="https://logowik.com/content/uploads/images/423918.logowik.com.webp" height="16" style="vertical-align:middle; padding-right: 4px;"/>dgerwig-</a> | 2024
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-if __name__ == "__main__":
-    main()
