@@ -316,34 +316,12 @@ def main():
                 div[data-testid="metric-container"] {
                     background-color: #1E1E1E;
                     border: 1px solid #333333;
-                    padding: 0;  /* Remove padding */
                     border-radius: 5px;
                     color: #FFFFFF;
                     margin: 1px;
-                    height: 55px;
+                    height: 50px;  /* Reduced height slightly */
                     display: flex;
                     flex-direction: column;
-                }
-                
-                /* Header styles */
-                div.metric-header {
-                    text-align: center;
-                    color: #CCCCCC;
-                    font-size: 0.7rem;
-                    padding: 2px 0;
-                    margin: 0;
-                    line-height: 1;
-                    width: 100%;
-                    flex: 0 0 auto;  /* Don't grow or shrink */
-                }
-                
-                /* Value container */
-                div[data-testid="metric-container"] > div {
-                    flex: 1;  /* Take remaining space */
-                    display: flex;
-                    align-items: center;  /* Vertical center */
-                    justify-content: center;  /* Horizontal center */
-                    padding: 0 5px;
                 }
                 
                 /* Metric value styles */
@@ -351,39 +329,58 @@ def main():
                     color: #FFFFFF;
                     font-size: 1rem;
                     text-align: center;
-                    width: 100%;
-                    margin: 0;
-                    padding: 0;
-                    line-height: 1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 30px;  /* Fixed height for values */
+                }
+                
+                /* Column header styles */
+                div.metric-header {
+                    color: #CCCCCC;
+                    font-size: 0.8rem;  /* Increased size for column headers */
+                    text-align: center;
+                    padding: 2px 0;
+                    height: 20px;  /* Fixed height for headers */
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
                 
                 /* Campus header styles */
                 div.campus-header {
                     background-color: #2E2E2E;
-                    padding: 2px 8px;
+                    padding: 1px 8px;  /* Reduced vertical padding */
                     border-radius: 5px;
-                    margin: 3px 0px;
+                    margin: 2px 0px;  /* Reduced margin */
                     border-left: 5px solid;
+                    height: 24px;  /* Fixed height for campus headers */
+                    display: flex;
+                    align-items: center;
                 }
                 
+                /* Campus header text */
                 div.campus-header h2, div.campus-header h3 {
-                    font-size: 0.8rem;
+                    font-size: 1.1rem;  /* Increased size for campus names */
                     margin: 0;
-                    padding: 1px 0;
-                }
-                
-                /* Remove extra spacing */
-                div.block-container {
-                    padding-top: 1rem;
-                }
-                
-                div.stMarkdown {
-                    margin-bottom: 0px;
+                    padding: 0;
                 }
 
-                /* Hide any delta values */
+                /* Global metrics header */
+                div.campus-header h2 {
+                    font-size: 1rem;  /* Slightly smaller than campus names */
+                }
+                
+                /* Hide delta values */
                 div[data-testid="metric-container"] div[data-testid="metric-delta"] {
                     display: none !important;
+                }
+
+                /* Ensure content stays within bounds */
+                div[data-testid="metric-container"] > div {
+                    overflow: hidden;
+                    white-space: nowrap;
+                    text-overflow: ellipsis;
                 }
             </style>
         """, unsafe_allow_html=True)
