@@ -1,229 +1,16 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from src.scraper import AOCScraper
-
-# Define campus color mapping
-CAMPUS_COLORS = {
-    'UDZ': '#00FF00',  # Green
-    'BCN': '#FFD700',  # Yellow
-    'MAL': '#00FFFF',  # Cyan
-    'MAD': '#FF00FF'   # Magenta
-}
-
-def load_data():
-    """Load and cache data from scraper silently"""
-    @st.cache_data(ttl=300)  # Cache for 5 minutes
-    def _load():
-        import sys
-        import io
-        
-        # Temporarily redirect stdout to capture scraper output
-        old_stdout = sys.stdout
-        sys.stdout = io.StringIO()
-        
-        try:
-            scraper = AOCScraper()
-            df = scraper.scrape_data()
-            
-            # Reset stdout
-            sys.stdout = old_stdout
-            
-            return df.sort_values('points', ascending=False).reset_index(drop=True)
-        except Exception as e:
-            # Reset stdout even if there's an error
-            sys.stdout = old_stdout
-            raise e
-    
-    return _load()
-
-def get_campus_metrics(df):
-    """Calculate metrics for each campus"""
-    campus_metrics = {}
-    
-    for campus in sorted(df['campus'].unique()):
-        campus_data = df[df['campus'] == campus]
-        metrics = {
-            'Students': len(campus_data),
-            'Avg Points': f"{campus_data['points'].mean():.1f}",
-            'Max Points': f"{campus_data['points'].max():.1f}",
-            'Avg Streak': f"{campus_data['streak'].mean():.1f}",
-            'Max Streak': int(campus_data['streak'].max()),
-            'Total Gold': int(campus_data['gold_stars'].sum()),
-            'Total Silver': int(campus_data['silver_stars'].sum()),
-            'Completion Rate': f"{(campus_data['total_stars'].sum() / (len(campus_data) * 50)) * 100:.1f}%"
-        }
-        campus_metrics[campus] = metrics
-    
-    return campus_metrics
-
-def plot_stars_distribution(df):
-    """Plot distribution of gold and silver stars"""
-    melted_df = pd.melt(
-        df,
-        value_vars=['gold_stars', 'silver_stars'],
-        var_name='star_type',
-        value_name='count'
-    )
-    # Asegurarse que star_type es una categoría
-    melted_df['star_type'] = pd.Categorical(melted_df['star_type'])
-    
-    fig = px.box(
-        melted_df,
-        x='star_type',
-        y='count',
-        color='star_type',
-        points='all',
-        color_discrete_map={
-            'gold_stars': '#FFD700',
-            'silver_stars': '#C0C0C0'
-        },
-        title='Stars Distribution'
-    )
-    
-    fig.update_layout(height=500, title_x=0.5)
-    return fig
-
-def plot_completion_heatmap(df):
-    """Create challenge completion heatmap"""
-    day_columns = [col for col in df.columns if col.startswith('day_')]
-    completion_matrix = df[day_columns].values
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=completion_matrix.T,
-        colorscale=[
-            [0, 'white'],
-            [0.5, '#C0C0C0'],
-            [1, '#FFD700']
-        ],
-        zmin=0,
-        zmax=2
-    ))
-    
-    fig.update_layout(
-        title='Challenge Completion Status',
-        title_x=0.5,
-        xaxis_title='Participant Index',
-        yaxis_title='Day',
-        height=500
-    )
-    return fig
-
-def plot_completion_rate(df):
-    """Plot completion rate over time by campus"""
-    current_day = get_current_aoc_day(df)
-    day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
-    completion_data = []
-    
-    # Convertir campus a categoría antes de procesar
-    df['campus'] = pd.Categorical(df['campus'])
-    
-    for campus in df['campus'].unique():
-        campus_data = df[df['campus'] == campus]
-        for day in day_columns:
-            day_num = int(day.split('_')[1])
-            completion = (campus_data[day] > 0).sum() / len(campus_data) * 100
-            completion_data.append({
-                'Day': day_num,
-                'Rate': completion,
-                'Campus': campus
-            })
-    
-    completion_df = pd.DataFrame(completion_data)
-    # Asegurar que Campus es una categoría
-    completion_df['Campus'] = pd.Categorical(completion_df['Campus'])
-    
-    fig = px.line(
-        completion_df,
-        x='Day',
-        y='Rate',
-        color='Campus',
-        title='Daily Completion Rate by Campus',
-        labels={'Rate': 'Completion Rate (%)'},
-        color_discrete_map=CAMPUS_COLORS
-    )
-    
-    fig.update_layout(height=500, title_x=0.5)
-    return fig
-
-def plot_points_vs_days(df):
-    """Create scatter plot of points vs completed days"""
-    # Asegurar que campus es una categoría
-    df = df.copy()
-    df['campus'] = pd.Categorical(df['campus'])
-    
-    fig = px.scatter(
-        df,
-        x="completed_days",
-        y="points",
-        color="campus",
-        size="total_stars",
-        hover_data=["login"],
-        title="Points vs Days Completed",
-        color_discrete_map=CAMPUS_COLORS
-    )
-    
-    fig.update_layout(height=500, title_x=0.5)
-    return fig
-
-def plot_campus_progress(df):
-    """Create radar chart of campus performance"""
-    campus_stats = (df.groupby('campus', as_index=False)
-                   .agg({
-                       'points': 'mean',
-                       'streak': 'mean',
-                       'completed_days': 'mean',
-                       'gold_stars': 'mean',
-                       'silver_stars': 'mean'
-                   })
-                   .round(2)
-                   .set_index('campus'))
-    
-    fig = go.Figure()
-    
-    for campus in campus_stats.index:
-        fig.add_trace(go.Scatterpolar(
-            r=campus_stats.loc[(campus,)],  
-            theta=campus_stats.columns,
-            name=campus,
-            line_color=CAMPUS_COLORS.get(campus, '#808080')
-        ))
-    
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, showticklabels=True)),
-        showlegend=True,
-        title='Campus Performance Overview',
-        height=500,
-        title_x=0.5
-    )
-    return fig
-
-def plot_points_distribution(df):
-    """Create box plot of points distribution by campus"""
-    # Asegurar que campus es una categoría
-    df = df.copy()
-    df['campus'] = pd.Categorical(df['campus'])
-    
-    fig = px.box(
-        df,
-        x="campus",
-        y="points",
-        color="campus",
-        points="all",
-        title="Points Distribution by Campus",
-        color_discrete_map=CAMPUS_COLORS
-    )
-    
-    fig.add_hline(
-        y=df['points'].median(),
-        line_dash="dash",
-        line_color="gray",
-        annotation_text=f"Global Median: {df['points'].median():.1f}"
-    )
-    
-    fig.update_layout(height=500, title_x=0.5, showlegend=False)
-    return fig
+from src.data_processing import (
+    load_data,
+    create_metrics_dataframe,
+    plot_stars_distribution,
+    plot_completion_heatmap,
+    plot_completion_rate,
+    plot_points_vs_days,
+    plot_campus_progress,
+    plot_points_distribution
+)
+from src.utils import suppress_plotly_warnings
 
 def apply_filters(df):
     """Apply user-selected filters to the dataframe"""
@@ -243,9 +30,8 @@ def apply_filters(df):
 
     st.sidebar.header("🎯 Filters")
     
-    # Reset filters button - debe estar al inicio para que pueda resetear todos los valores
+    # Reset filters button
     if st.sidebar.button("🔄 Reset Filters"):
-        # Reset all filters to default values
         st.session_state.filter_state = {
             'campus': "All",
             'points_range': (float(df["points"].min()), float(df["points"].max())),
@@ -369,45 +155,8 @@ def apply_filters(df):
     
     return filtered_df
 
-def get_current_aoc_day(df):
-    """Get current day based on available day columns"""
-    return len([col for col in df.columns if col.startswith('day_')])
-
-
-def create_metrics_dataframe(df, is_global=True):
-    """Create a formatted dataframe for metrics"""
-    current_day = get_current_aoc_day(df)
-    max_possible_stars = current_day * 2
-
-    if is_global:
-        completion_rate = (df['total_stars'].sum() / (len(df) * max_possible_stars)) * 100
-        
-        data = {
-            'Section': ['🌍 Global'],
-            'Students': [len(df)],
-            'Points (Avg/Max)': [f"{df['points'].mean():.1f}/{df['points'].max():.1f}"],
-            'Streak (Avg/Max)': [f"{df['streak'].mean():.1f}/{df['streak'].max()}"],
-            'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())}/{int(df['silver_stars'].sum())}"],
-            'Completion Rate': [f"{completion_rate:.1f}%"]
-        }
-    else:
-        data = []
-        for campus in sorted(df['campus'].unique()):
-            campus_data = df[df['campus'] == campus]
-            campus_completion = (campus_data['total_stars'].sum() / 
-                               (len(campus_data) * max_possible_stars)) * 100
-            
-            data.append({
-                'Section': f"🏛️ {campus}",
-                'Students': len(campus_data),
-                'Points (Avg/Max)': f"{campus_data['points'].mean():.1f}/{campus_data['points'].max():.1f}",
-                'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f}/{campus_data['streak'].max()}",
-                'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())}/{int(campus_data['silver_stars'].sum())}",
-                'Completion Rate': f"{campus_completion:.1f}%"
-            })
-    return pd.DataFrame(data)
-
 def main():
+    suppress_plotly_warnings()
     st.set_page_config(page_title="🎄 42 Spain AoC 2024", layout="wide")
     
     st.title("💫 42 Spain | 🎄Advent of Code 2024 Dashboard")
