@@ -4,9 +4,8 @@ from src.data_processing import (
     load_data,
     create_metrics_dataframe,
     plot_stars_distribution,
-    # plot_completion_heatmap,
     plot_star_totals_by_campus,
-    plot_completion_rate,
+    plot_success_rate,
     plot_points_vs_days,
     plot_campus_progress,
     plot_points_distribution,
@@ -395,7 +394,7 @@ def main():
         with tab2:
             col1, col2 = st.columns(2)
             with col1:
-                st.plotly_chart(plot_completion_rate(filtered_df), use_container_width=True)
+                st.plotly_chart(plot_success_rate(filtered_df), use_container_width=True)
             with col2:
                 st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
         

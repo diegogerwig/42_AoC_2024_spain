@@ -71,9 +71,9 @@ def create_metrics_dataframe(df, is_global=True):
             data.append({
                 'Section': colored_campus,
                 'Students': len(campus_data),
-                'Points (Avg/Max)': f"{campus_data['points'].mean():.1f} / {campus_data['points'].max():.1f}",
-                'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f} / {campus_data['streak'].max()}",
-                'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())} / {int(campus_data['silver_stars'].sum())}",
+                'Points (Avg / Max)': f"{campus_data['points'].mean():.1f} / {campus_data['points'].max():.1f}",
+                'Streak (Avg / Max)': f"{campus_data['streak'].mean():.1f} / {campus_data['streak'].max()}",
+                'Stars (Gold / Silver)': f"{int(campus_data['gold_stars'].sum())} / {int(campus_data['silver_stars'].sum())}",
                 'Success Rate': f"{campus_success:.1f}%"
             })
     return pd.DataFrame(data)
