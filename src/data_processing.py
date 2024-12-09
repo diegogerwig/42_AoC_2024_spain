@@ -65,8 +65,11 @@ def create_metrics_dataframe(df, is_global=True):
             campus_completion = (campus_data['total_stars'].sum() / 
                                (len(campus_data) * max_possible_stars)) * 100
             
+            # Create colored campus name
+            colored_campus = f"<span style='color: {CAMPUS_COLORS[campus]}'>🏛️ {campus}</span>"
+            
             data.append({
-                'Section': f"🏛️ {campus}",
+                'Section': colored_campus,
                 'Students': len(campus_data),
                 'Points (Avg/Max)': f"{campus_data['points'].mean():.1f}/{campus_data['points'].max():.1f}",
                 'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f}/{campus_data['streak'].max()}",
@@ -134,24 +137,24 @@ def plot_completion_rate(df):
     day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
     completion_data = []
     
-    df = df.copy()
-    df['campus'] = pd.Categorical(df['campus'])
-    
-    # Use list comprehension instead of groupby
+    # Usar un enfoque más directo sin groupby
     for campus in df['campus'].unique():
-        campus_data = df[df['campus'] == campus]
-        campus_completions = [
-            {
-                'Day': int(day.split('_')[1]),
-                'Rate': (campus_data[day] > 0).sum() / len(campus_data) * 100,
-                'Campus': (campus,)  # Use tuple for single element
-            }
-            for day in day_columns
-        ]
-        completion_data.extend(campus_completions)
+        # Filtrar datos para cada campus
+        campus_mask = df['campus'] == campus
+        for day in day_columns:
+            day_num = int(day.split('_')[1])
+            # Calcular la tasa de finalización
+            completion = (df[campus_mask][day] > 0).sum() / campus_mask.sum() * 100
+            completion_data.append({
+                'Day': day_num,
+                'Rate': completion,
+                'Campus': campus  # No necesitamos una tupla aquí
+            })
     
+    # Crear DataFrame con los resultados
     completion_df = pd.DataFrame(completion_data)
     
+    # Crear el gráfico
     fig = px.line(
         completion_df,
         x='Day',
