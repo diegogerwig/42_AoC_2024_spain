@@ -298,180 +298,157 @@ def apply_filters(df):
     return filtered_df
 
 
+def create_metrics_dataframe(df, is_global=True):
+    """Create a formatted dataframe for metrics"""
+    if is_global:
+        data = {
+            'Section': ['🌍 Global'],
+            'Students': [len(df)],
+            'Points (Avg/Max)': [f"{df['points'].mean():.1f}/{df['points'].max():.1f}"],
+            'Streak (Avg/Max)': [f"{df['streak'].mean():.1f}/{df['streak'].max()}"],
+            'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())}/{int(df['silver_stars'].sum())}"],
+            'Completion Rate': [f"{(df['total_stars'].sum() / (len(df) * 50)) * 100:.1f}%"]
+        }
+    else:
+        data = []
+        for campus in sorted(df['campus'].unique()):
+            campus_data = df[df['campus'] == campus]
+            data.append({
+                'Section': f"🏛️ {campus}",
+                'Students': len(campus_data),
+                'Points (Avg/Max)': f"{campus_data['points'].mean():.1f}/{campus_data['points'].max():.1f}",
+                'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f}/{campus_data['streak'].max()}",
+                'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())}/{int(campus_data['silver_stars'].sum())}",
+                'Completion Rate': f"{(campus_data['total_stars'].sum() / (len(campus_data) * 50)) * 100:.1f}%"
+            })
+    return pd.DataFrame(data)
+
 def main():
     st.set_page_config(page_title="42 Spain AoC 2024 Dashboard", layout="wide")
     
-    # Simple header
     st.title("💫 42 Spain Advent of Code 2024 Dashboard")
     
     try:
         df = load_data()
         filtered_df = apply_filters(df)
-        
-        # Global and Campus Metrics Section
-        st.markdown("---")
+
+        # Table styling
         st.markdown("""
             <style>
-                /* Container styles */
-                div[data-testid="metric-container"] {
-                    background-color: #1E1E1E;
-                    border: 1px solid #333333;
-                    border-radius: 5px;
-                    color: #FFFFFF;
-                    margin: 1px;
-                    height: 50px;  /* Reduced height slightly */
-                    display: flex;
-                    flex-direction: column;
+                /* Base table style */
+                div[data-testid="stTable"] table {
+                    width: 100%;
+                    table-layout: fixed;
+                    border-collapse: collapse;
                 }
                 
-                /* Metric value styles */
-                div[data-testid="metric-container"] div[data-testid="metric-value"] {
-                    color: #FFFFFF;
-                    font-size: 1rem;
-                    text-align: center;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    height: 30px;  /* Fixed height for values */
-                }
-                
-                /* Column header styles */
-                div.metric-header {
-                    color: #CCCCCC;
-                    font-size: 0.8rem;  /* Increased size for column headers */
-                    text-align: center;
-                    padding: 2px 0;
-                    height: 20px;  /* Fixed height for headers */
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                
-                /* Campus header styles */
-                div.campus-header {
+                /* Header cells */
+                div[data-testid="stTable"] th {
                     background-color: #2E2E2E;
-                    padding: 1px 8px;  /* Reduced vertical padding */
-                    border-radius: 5px;
-                    margin: 2px 0px;  /* Reduced margin */
-                    border-left: 5px solid;
-                    height: 24px;  /* Fixed height for campus headers */
-                    display: flex;
-                    align-items: center;
+                    color: #AAAAAA;
+                    font-weight: normal;
+                    padding: 8px;
+                    font-size: 0.9em;
+                    text-align: center !important;
+                    vertical-align: middle;
                 }
                 
-                /* Campus header text */
-                div.campus-header h2, div.campus-header h3 {
-                    font-size: 1.1rem;  /* Increased size for campus names */
-                    margin: 0;
-                    padding: 0;
-                }
-
-                /* Global metrics header */
-                div.campus-header h2 {
-                    font-size: 1rem;  /* Slightly smaller than campus names */
+                /* All data cells */
+                div[data-testid="stTable"] td {
+                    background-color: #1E1E1E;
+                    color: white;
+                    padding: 8px;
+                    text-align: center !important;
+                    vertical-align: middle;
                 }
                 
-                /* Hide delta values */
-                div[data-testid="metric-container"] div[data-testid="metric-delta"] {
-                    display: none !important;
+                /* Global metrics row */
+                div[data-testid="stTable"] tr:first-child td {
+                    background-color: #2E2E2E;
+                    font-weight: bold;
+                }
+                
+                /* Section column (first column) */
+                div[data-testid="stTable"] td:first-child,
+                div[data-testid="stTable"] th:first-child {
+                    text-align: left !important;
+                    width: 15%;
+                    padding-left: 15px;
+                }
+                
+                /* Column-specific widths */
+                div[data-testid="stTable"] td:nth-child(2),
+                div[data-testid="stTable"] th:nth-child(2) {
+                    width: 10%;  /* Students */
+                }
+                
+                div[data-testid="stTable"] td:nth-child(3),
+                div[data-testid="stTable"] th:nth-child(3) {
+                    width: 20%;  /* Points */
+                }
+                
+                div[data-testid="stTable"] td:nth-child(4),
+                div[data-testid="stTable"] th:nth-child(4) {
+                    width: 20%;  /* Streak */
+                }
+                
+                div[data-testid="stTable"] td:nth-child(5),
+                div[data-testid="stTable"] th:nth-child(5) {
+                    width: 20%;  /* Stars */
+                }
+                
+                div[data-testid="stTable"] td:nth-child(6),
+                div[data-testid="stTable"] th:nth-child(6) {
+                    width: 15%;  /* Completion */
                 }
 
-                /* Ensure content stays within bounds */
-                div[data-testid="metric-container"] > div {
-                    overflow: hidden;
+                /* Force center alignment for all cells except first column */
+                div[data-testid="stTable"] td:not(:first-child),
+                div[data-testid="stTable"] th:not(:first-child) {
+                    text-align: center !important;
+                    display: table-cell;
+                    vertical-align: middle;
+                    line-height: normal;
                     white-space: nowrap;
-                    text-overflow: ellipsis;
                 }
             </style>
         """, unsafe_allow_html=True)
 
-        # Global Metrics Header
-        st.markdown('<div class="campus-header" style="border-left-color: #FFD700;"><h2 style="color: white;">🌍 Global Metrics</h2></div>', unsafe_allow_html=True)
-
-        col1, col2, col3, col4, col5 = st.columns(5)
-
-        with col1:
-            st.markdown('<div class="metric-header">Total Participants</div>', unsafe_allow_html=True)
-            st.metric("Total Participants", len(filtered_df), label_visibility="hidden")
-
-        with col2:
-            st.markdown('<div class="metric-header">Average Points</div>', unsafe_allow_html=True)
-            st.metric("Average Points", f"{filtered_df['points'].mean():.1f}", label_visibility="hidden")
-
-        with col3:
-            st.markdown('<div class="metric-header">Gold Stars</div>', unsafe_allow_html=True)
-            st.metric("Gold Stars", int(filtered_df['gold_stars'].sum()), label_visibility="hidden")
-
-        with col4:
-            st.markdown('<div class="metric-header">Silver Stars</div>', unsafe_allow_html=True)
-            st.metric("Silver Stars", int(filtered_df['silver_stars'].sum()), label_visibility="hidden")
-
-        with col5:
-            st.markdown('<div class="metric-header">Completion Rate</div>', unsafe_allow_html=True)
-            completion_rate = (filtered_df['total_stars'].sum() / (len(filtered_df) * 50)) * 100
-            st.metric("Completion Rate", f"{completion_rate:.1f}%", label_visibility="hidden")
-
-                
-        # Campus metrics with styled headers
-        campus_metrics = get_campus_metrics(filtered_df)
+        # Performance Metrics Table
+        st.subheader("📊 Performance Metrics")
         
-        # Define campus colors
-        campus_colors = {
-            'UDZ': '#00FF00',  # Green
-            'BCN': '#FFD700',  # Yellow
-            'MAL': '#00FFFF',  # Cyan
-            'MAD': '#FF00FF'   # Magenta
-        }
+        # Combine global and campus metrics
+        global_df = create_metrics_dataframe(filtered_df, is_global=True)
+        campus_df = create_metrics_dataframe(filtered_df, is_global=False)
+        metrics_df = pd.concat([global_df, campus_df], ignore_index=True)
         
-        for campus in campus_metrics:
-            st.markdown(f"""
-                <div class="campus-header" style="border-left-color: {campus_colors.get(campus, '#FFFFFF')};">
-                    <h3 style="color: white;">🏛️ {campus} Campus</h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            metrics = campus_metrics[campus]
-            cols = st.columns(5)
-            
-            with cols[0]:
-                st.markdown('<div class="metric-header">Students</div>', unsafe_allow_html=True)
-                st.metric("Students", metrics['Students'], label_visibility="hidden")
-            with cols[1]:
-                st.markdown('<div class="metric-header">Points (Avg/Max)</div>', unsafe_allow_html=True)
-                st.metric("Points", f"{metrics['Avg Points']}/{metrics['Max Points']}", label_visibility="hidden")
-            with cols[2]:
-                st.markdown('<div class="metric-header">Streak (Avg/Max)</div>', unsafe_allow_html=True)
-                st.metric("Streak", f"{metrics['Avg Streak']}/{metrics['Max Streak']}", label_visibility="hidden")
-            with cols[3]:
-                st.markdown('<div class="metric-header">Stars (Gold/Silver)</div>', unsafe_allow_html=True)
-                st.metric("Stars", f"{metrics['Total Gold']}/{metrics['Total Silver']}", label_visibility="hidden")
-            with cols[4]:
-                st.markdown('<div class="metric-header">Completion Rate</div>', unsafe_allow_html=True)
-                st.metric("Completion Rate", metrics['Completion Rate'], label_visibility="hidden")
-        
+        # Display combined table
+        st.table(metrics_df.set_index('Section'))
+
+        # Visualizations
         st.markdown("---")
         tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
         
         with tab1:
             col1, col2 = st.columns(2)
             with col1:
-                st.plotly_chart(plot_stars_distribution(filtered_df))
+                st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_completion_heatmap(filtered_df))
+                st.plotly_chart(plot_completion_heatmap(filtered_df), use_container_width=True)
         
         with tab2:
             col1, col2 = st.columns(2)
             with col1:
-                st.plotly_chart(plot_completion_rate(filtered_df))
+                st.plotly_chart(plot_completion_rate(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_points_vs_days(filtered_df))
+                st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
         
         with tab3:
             col1, col2 = st.columns(2)
             with col1:
-                st.plotly_chart(plot_campus_progress(filtered_df))
+                st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_points_distribution(filtered_df))
+                st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
         
         # Detailed Data
         st.markdown("---")
