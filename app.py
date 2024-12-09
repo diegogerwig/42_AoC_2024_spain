@@ -294,7 +294,13 @@ def main():
                 {'selector': 'tr:first-child td', 'props': [
                     ('background-color', '#2E2E2E'),
                     ('font-weight', 'bold')
-                ]}
+                ]},
+                {'selector': 'td:nth-child(1)', 'props': [('width', '20%')]},
+                {'selector': 'td:nth-child(2)', 'props': [('width', '15%')]},
+                {'selector': 'td:nth-child(3)', 'props': [('width', '15%')]},
+                {'selector': 'td:nth-child(4)', 'props': [('width', '15%')]},
+                {'selector': 'td:nth-child(5)', 'props': [('width', '15%')]},
+                {'selector': 'td:nth-child(6)', 'props': [('width', '15%')]},
             ])
             .hide(axis="index")
             .to_html(escape=False),
@@ -322,79 +328,63 @@ def main():
             
             ranking_data.append({
                 'Rank': f'<div style="text-align: center">{i}</div>',
-                'Number of Students': f'<div style="text-align: center">{len(students)}</div>',
-                'Students': '  ||  '.join(colored_logins),
                 'Points': f'<div style="text-align: center">{points:.1f}</div>',
                 'Gold Stars': f'<div style="text-align: center">{first_student["gold_stars"]}</div>',
                 'Silver Stars': f'<div style="text-align: center">{first_student["silver_stars"]}</div>',
-                'Streak': f'<div style="text-align: center">{first_student["streak"]}</div>'
+                'Streak': f'<div style="text-align: center">{first_student["streak"]}</div>',
+                'Number of Students': f'<div style="text-align: center">{len(students)}</div>',
+                'Students': '  ||  '.join(colored_logins),
             })
 
         ranking_df = pd.DataFrame(ranking_data)
 
-        st.markdown("""
-            <style>
-                .ranking-table {
-                    width: 100%;
-                    table-layout: fixed;
-                    border-collapse: collapse;
-                }
-                /* Header cells */
-                .ranking-table th {
-                    background-color: #2E2E2E !important;
-                    color: #AAAAAA !important;
-                    font-weight: normal !important;
-                    padding: 8px !important;
-                    font-size: 0.9em !important;
-                    text-align: center !important;
-                    vertical-align: middle !important;
-                }
-                
-                /* All data cells */
-                .ranking-table td {
-                    background-color: #1E1E1E !important;
-                    color: white !important;
-                    padding: 8px !important;
-                    text-align: center !important;
-                    vertical-align: middle !important;
-                    font-size: 1.1em;
-                }
-
-                /* Force center alignment for all cells except Students */
-                .ranking-table td:not(:nth-child(3)),
-                .ranking-table th:not(:nth-child(3)) {
-                    text-align: center !important;
-                    white-space: nowrap !important;
-                }
-
-                /* Students column alignment */
-                .ranking-table td:nth-child(3),
-                .ranking-table th:nth-child(3) {
-                    text-align: left !important;
-                    padding-left: 15px !important;
-                }
-
-                /* Column widths */
-                .ranking-table td:first-child {
-                    font-weight: bold;
-                    font-size: 1.2em;
-                    width: 5%;
-                }
-                .ranking-table td:nth-child(2) { width: 10%; }  /* Number of Students */
-                .ranking-table td:nth-child(3) { width: 35%; }  /* Students */
-                .ranking-table td:nth-child(4),
-                .ranking-table td:nth-child(5),
-                .ranking-table td:nth-child(6),
-                .ranking-table td:nth-child(7) { width: 12.5%; } /* Points, Stars, Streak */
-            </style>
-        """, unsafe_allow_html=True)
-
         st.markdown(
             ranking_df.style
+            .set_table_styles([
+                {'selector': 'th', 'props': [
+                    ('background-color', '#2E2E2E'),
+                    ('color', '#AAAAAA'),
+                    ('font-weight', 'normal'),
+                    ('padding', '8px'),
+                    ('font-size', '0.9em'),
+                    ('text-align', 'center'),
+                    ('vertical-align', 'middle')
+                ]},
+                {'selector': 'td', 'props': [
+                    ('background-color', '#1E1E1E'),
+                    ('color', 'white'),
+                    ('padding', '8px'),
+                    ('text-align', 'center'),
+                    ('vertical-align', 'middle')
+                ]},
+                {'selector': 'td:nth-child(3)', 'props': [
+                    ('text-align', 'left'),
+                    ('padding-left', '15px')
+                ]},
+                {'selector': 'td:first-child', 'props': [
+                    ('font-weight', 'bold'),
+                    ('font-size', '1.2em'),
+                    ('width', '5%')
+                ]},
+                {'selector': 'td:nth-child(1)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(2)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(3)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(4)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(5)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(6)', 'props': [('width', '8%')]},
+                {'selector': 'td:nth-child(7)', 'props': [('width', '50%')]}
+            ])
             .hide(axis="index")
-            .to_html(escape=False, classes=['ranking-table']),
+            .to_html(escape=False),
             unsafe_allow_html=True
         )
+
+        # st.markdown(
+        #     ranking_df.style
+        #     .hide(axis="index")
+        #     .to_html(escape=False, classes=['ranking-table']),
+        #     unsafe_allow_html=True
+        # )
 
  
         # Visualizations
