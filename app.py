@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,31 +6,45 @@ from src.scraper import AOCScraper
 
 # Define campus color mapping
 CAMPUS_COLORS = {
-    'UDZ': '#98FB98',  # Pale Green
-    'BCN': '#FFD700',  # Gold
-    'MAL': '#00CED1',  # Turquoise
-    'MAD': '#FF69B4'   # Pink
+    'UDZ': '#00FF00',  # Green
+    'BCN': '#FFD700',  # Yellow
+    'MAL': '#00FFFF',  # Cyan
+    'MAD': '#FF00FF'   # Magenta
 }
 
 def load_data():
-    """Load and cache data from scraper"""
+    """Load and cache data from scraper silently"""
     @st.cache_data(ttl=300)  # Cache for 5 minutes
     def _load():
-        scraper = AOCScraper()
-        df = scraper.scrape_data()
-        return df.sort_values('points', ascending=False).reset_index(drop=True)
+        import sys
+        import io
+        
+        # Temporarily redirect stdout to capture scraper output
+        old_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        
+        try:
+            scraper = AOCScraper()
+            df = scraper.scrape_data()
+            
+            # Reset stdout
+            sys.stdout = old_stdout
+            
+            return df.sort_values('points', ascending=False).reset_index(drop=True)
+        except Exception as e:
+            # Reset stdout even if there's an error
+            sys.stdout = old_stdout
+            raise e
+    
     return _load()
 
-def show_campus_summary(df):
-    """Display summary metrics for each campus"""
-    st.subheader("📊 Campus Summary")
+def get_campus_metrics(df):
+    """Calculate metrics for each campus"""
+    campus_metrics = {}
     
-    # Calculate metrics per campus
-    campus_metrics = []
     for campus in sorted(df['campus'].unique()):
         campus_data = df[df['campus'] == campus]
         metrics = {
-            'Campus': campus,
             'Students': len(campus_data),
             'Avg Points': f"{campus_data['points'].mean():.1f}",
             'Max Points': f"{campus_data['points'].max():.1f}",
@@ -41,35 +54,21 @@ def show_campus_summary(df):
             'Total Silver': int(campus_data['silver_stars'].sum()),
             'Completion Rate': f"{(campus_data['total_stars'].sum() / (len(campus_data) * 50)) * 100:.1f}%"
         }
-        campus_metrics.append(metrics)
+        campus_metrics[campus] = metrics
     
-    # Create metrics DataFrame and display
-    metrics_df = pd.DataFrame(campus_metrics)
-    st.dataframe(
-        metrics_df,
-        hide_index=True,
-        column_config={
-            'Campus': st.column_config.Column(width='small'),
-            'Students': st.column_config.NumberColumn(width='small'),
-            'Avg Points': st.column_config.Column(width='small'),
-            'Max Points': st.column_config.Column(width='small'),
-            'Avg Streak': st.column_config.Column(width='small'),
-            'Max Streak': st.column_config.NumberColumn(width='small'),
-            'Total Gold': st.column_config.NumberColumn(width='small'),
-            'Total Silver': st.column_config.NumberColumn(width='small'),
-            'Completion Rate': st.column_config.Column(width='small')
-        }
-    )
+    return campus_metrics
 
 def plot_stars_distribution(df):
     """Plot distribution of gold and silver stars"""
+    melted_df = pd.melt(
+        df,
+        value_vars=['gold_stars', 'silver_stars'],
+        var_name='star_type',
+        value_name='count'
+    )
+    
     fig = px.box(
-        pd.melt(
-            df,
-            value_vars=['gold_stars', 'silver_stars'],
-            var_name='star_type',
-            value_name='count'
-        ),
+        melted_df,
         x='star_type',
         y='count',
         color='star_type',
@@ -78,41 +77,39 @@ def plot_stars_distribution(df):
             'gold_stars': '#FFD700',
             'silver_stars': '#C0C0C0'
         },
-        title='Stars Distribution',
-        labels={
-            'star_type': 'Star Type',
-            'count': 'Number of Stars'
-        }
+        title='Stars Distribution'
     )
     
     fig.update_layout(height=500, title_x=0.5)
     return fig
 
-def plot_points_vs_days(df):
-    """Create interactive scatter plot for points vs completed days"""
-    fig = px.scatter(
-        df,
-        x="completed_days",
-        y="points",
-        color="campus",
-        size="total_stars",
-        hover_data=["login", "gold_stars", "silver_stars"],
-        color_discrete_map=CAMPUS_COLORS,
-        title="Points vs Days with Stars",
-        labels={
-            "completed_days": "Days with Stars",
-            "points": "Points",
-            "campus": "Campus",
-            "total_stars": "Total Stars",
-            "login": "User"
-        }
-    )
+def plot_completion_heatmap(df):
+    """Create challenge completion heatmap"""
+    day_columns = [col for col in df.columns if col.startswith('day_')]
+    completion_matrix = df[day_columns].values
     
-    fig.update_layout(height=500, title_x=0.5)
+    fig = go.Figure(data=go.Heatmap(
+        z=completion_matrix.T,
+        colorscale=[
+            [0, 'white'],
+            [0.5, '#C0C0C0'],
+            [1, '#FFD700']
+        ],
+        zmin=0,
+        zmax=2
+    ))
+    
+    fig.update_layout(
+        title='Challenge Completion Status',
+        title_x=0.5,
+        xaxis_title='Participant Index',
+        yaxis_title='Day',
+        height=500
+    )
     return fig
 
 def plot_completion_rate(df):
-    """Create completion rate visualization"""
+    """Plot completion rate over time by campus"""
     day_columns = [col for col in df.columns if col.startswith('day_')]
     completion_data = []
     
@@ -120,15 +117,12 @@ def plot_completion_rate(df):
         campus_data = df[df['campus'] == campus]
         for day in day_columns:
             day_num = int(day.split('_')[1])
-            silver = (campus_data[day] >= 1).sum()
-            gold = (campus_data[day] == 2).sum()
-            total_users = len(campus_data)
-            silver_rate = (silver / total_users) * 100
-            gold_rate = (gold / total_users) * 100
-            completion_data.extend([
-                {'Day': day_num, 'Rate': silver_rate, 'Type': 'Silver', 'Campus': campus},
-                {'Day': day_num, 'Rate': gold_rate, 'Type': 'Gold', 'Campus': campus}
-            ])
+            completion = (campus_data[day] > 0).sum() / len(campus_data) * 100
+            completion_data.append({
+                'Day': day_num,
+                'Rate': completion,
+                'Campus': campus
+            })
     
     completion_df = pd.DataFrame(completion_data)
     
@@ -137,28 +131,32 @@ def plot_completion_rate(df):
         x='Day',
         y='Rate',
         color='Campus',
-        line_dash='Type',
-        color_discrete_map=CAMPUS_COLORS,
-        title='Daily Star Completion Rate by Campus',
-        labels={
-            'Day': 'Challenge Day',
-            'Rate': 'Completion Rate (%)',
-            'Campus': 'Campus',
-            'Type': 'Star Type'
-        }
+        title='Daily Completion Rate by Campus',
+        labels={'Rate': 'Completion Rate (%)'},
+        color_discrete_map=CAMPUS_COLORS
     )
     
-    fig.update_layout(
-        height=500,
-        title_x=0.5,
-        xaxis=dict(tickmode='linear'),
-        yaxis=dict(range=[0, 100])
+    fig.update_layout(height=500, title_x=0.5)
+    return fig
+
+def plot_points_vs_days(df):
+    """Create scatter plot of points vs completed days"""
+    fig = px.scatter(
+        df,
+        x="completed_days",
+        y="points",
+        color="campus",
+        size="total_stars",
+        hover_data=["login"],
+        title="Points vs Days Completed",
+        color_discrete_map=CAMPUS_COLORS
     )
     
+    fig.update_layout(height=500, title_x=0.5)
     return fig
 
 def plot_campus_progress(df):
-    """Create campus progress visualization"""
+    """Create radar chart of campus performance"""
     campus_stats = df.groupby('campus').agg({
         'points': 'mean',
         'streak': 'mean',
@@ -184,58 +182,20 @@ def plot_campus_progress(df):
         height=500,
         title_x=0.5
     )
-    
-    return fig
-
-def plot_completion_heatmap(df):
-    """Create challenge completion heatmap"""
-    day_columns = [col for col in df.columns if col.startswith('day_')]
-    completion_matrix = df[day_columns].values
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=completion_matrix.T,
-        colorscale=[
-            [0, 'white'],      # No stars
-            [0.5, '#C0C0C0'],  # Silver stars
-            [1, '#FFD700']     # Gold stars
-        ],
-        zmin=0,
-        zmax=2,
-        showscale=True,
-        colorbar=dict(
-            ticktext=['No Stars', 'Silver Star', 'Gold Stars'],
-            tickvals=[0, 1, 2],
-            tickmode='array'
-        )
-    ))
-    
-    fig.update_layout(
-        title='Challenge Completion Status',
-        xaxis_title='Participant Index',
-        yaxis_title='Day',
-        height=600,
-        title_x=0.5
-    )
-    
     return fig
 
 def plot_points_distribution(df):
-    """Create points distribution visualization by campus"""
+    """Create box plot of points distribution by campus"""
     fig = px.box(
         df,
         x="campus",
         y="points",
         color="campus",
         points="all",
-        color_discrete_map=CAMPUS_COLORS,
         title="Points Distribution by Campus",
-        labels={
-            "campus": "Campus",
-            "points": "Points"
-        }
+        color_discrete_map=CAMPUS_COLORS
     )
-
-    # Add median line
+    
     fig.add_hline(
         y=df['points'].median(),
         line_dash="dash",
@@ -243,23 +203,7 @@ def plot_points_distribution(df):
         annotation_text=f"Global Median: {df['points'].median():.1f}"
     )
     
-    fig.update_layout(
-        height=500,
-        title_x=0.5,
-        showlegend=False,
-        xaxis_title="Campus",
-        yaxis_title="Points"
-    )
-    
-    # Personalizar el hover
-    fig.update_traces(
-        hovertemplate="<br>".join([
-            "Campus: %{x}",
-            "Points: %{y:.1f}",
-            "<extra></extra>"
-        ])
-    )
-    
+    fig.update_layout(height=500, title_x=0.5, showlegend=False)
     return fig
 
 def apply_filters(df):
@@ -293,7 +237,7 @@ def apply_filters(df):
         value=(int(df["silver_stars"].min()), int(df["silver_stars"].max()))
     )
 
-    # Streak range filter
+    # Streak filter
     streak_range = st.sidebar.slider(
         "🔥 Streak Range",
         min_value=int(df["streak"].min()),
@@ -303,7 +247,7 @@ def apply_filters(df):
 
     # Completed days filter
     days_range = st.sidebar.slider(
-        "📅 Days with Stars",
+        "📅 Days Completed",
         min_value=int(df["completed_days"].min()),
         max_value=int(df["completed_days"].max()),
         value=(int(df["completed_days"].min()), int(df["completed_days"].max()))
@@ -333,7 +277,7 @@ def apply_filters(df):
     st.sidebar.subheader("📊 Sort Options")
     sort_by = st.sidebar.selectbox(
         "Sort by",
-        ["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days with Stars"]
+        ["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days Completed"]
     )
     sort_order = st.sidebar.radio("Order", ["Descending", "Ascending"])
     
@@ -345,87 +289,212 @@ def apply_filters(df):
     # Filter summary
     st.sidebar.markdown("---")
     st.sidebar.subheader("📈 Filter Summary")
-    st.sidebar.write(f"Showing {len(filtered_df)} of {len(df)} users")
+    st.sidebar.write(f"Showing {len(filtered_df)} of {len(df)} participants")
     
     # Reset filters button
-    if st.sidebar.button("🔄 Reset All Filters"):
-        st.experimental_rerun()
+    if st.sidebar.button("🔄 Reset Filters"):
+        st.rerun()
     
     return filtered_df
 
+
 def main():
-    # Page configuration
-    st.set_page_config(
-        page_title="💫 42 Spain Advent of Code 2024 Analysis",
-        layout="wide"
-    )
+    st.set_page_config(page_title="42 Spain AoC 2024 Dashboard", layout="wide")
     
-    # Header
-    st.title("💫 42 Spain Advent of Code 2024 Analysis 📊")
+    # Simple header
+    st.title("💫 42 Spain Advent of Code 2024 Dashboard")
     
-    # Load data
-    df = load_data()
-    
-    # Show campus summary
-    show_campus_summary(df)
-    
-    # Apply filters
-    filtered_df = apply_filters(df)
-    
-    # Show global metrics
-    st.markdown("---")
-    st.subheader("🎯 Global Metrics")
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("Total Users", len(filtered_df))
-    with col2:
-        st.metric("Average Points", f"{filtered_df['points'].mean():.1f}")
-    with col3:
-        st.metric("Gold Stars", int(filtered_df['gold_stars'].sum()))
-    with col4:
-        st.metric("Silver Stars", int(filtered_df['silver_stars'].sum()))
-    with col5:
-        completion_rate = (filtered_df['total_stars'].sum() / (len(filtered_df) * 50)) * 100
-        st.metric("Completion Rate", f"{completion_rate:.1f}%")
-    
-    # Display visualizations in tabs
-    st.markdown("---")
-    tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
-    
-    with tab1:
-        col1, col2 = st.columns(2)
+    try:
+        df = load_data()
+        filtered_df = apply_filters(df)
+        
+        # Global and Campus Metrics Section
+        st.markdown("---")
+        st.markdown("""
+            <style>
+                /* Container styles */
+                div[data-testid="metric-container"] {
+                    background-color: #1E1E1E;
+                    border: 1px solid #333333;
+                    padding: 0;  /* Remove padding */
+                    border-radius: 5px;
+                    color: #FFFFFF;
+                    margin: 1px;
+                    height: 55px;
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                /* Header styles */
+                div.metric-header {
+                    text-align: center;
+                    color: #CCCCCC;
+                    font-size: 0.7rem;
+                    padding: 2px 0;
+                    margin: 0;
+                    line-height: 1;
+                    width: 100%;
+                    flex: 0 0 auto;  /* Don't grow or shrink */
+                }
+                
+                /* Value container */
+                div[data-testid="metric-container"] > div {
+                    flex: 1;  /* Take remaining space */
+                    display: flex;
+                    align-items: center;  /* Vertical center */
+                    justify-content: center;  /* Horizontal center */
+                    padding: 0 5px;
+                }
+                
+                /* Metric value styles */
+                div[data-testid="metric-container"] div[data-testid="metric-value"] {
+                    color: #FFFFFF;
+                    font-size: 1rem;
+                    text-align: center;
+                    width: 100%;
+                    margin: 0;
+                    padding: 0;
+                    line-height: 1;
+                }
+                
+                /* Campus header styles */
+                div.campus-header {
+                    background-color: #2E2E2E;
+                    padding: 2px 8px;
+                    border-radius: 5px;
+                    margin: 3px 0px;
+                    border-left: 5px solid;
+                }
+                
+                div.campus-header h2, div.campus-header h3 {
+                    font-size: 0.8rem;
+                    margin: 0;
+                    padding: 1px 0;
+                }
+                
+                /* Remove extra spacing */
+                div.block-container {
+                    padding-top: 1rem;
+                }
+                
+                div.stMarkdown {
+                    margin-bottom: 0px;
+                }
+
+                /* Hide any delta values */
+                div[data-testid="metric-container"] div[data-testid="metric-delta"] {
+                    display: none !important;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # Global Metrics Header
+        st.markdown('<div class="campus-header" style="border-left-color: #FFD700;"><h2 style="color: white;">🌍 Global Metrics</h2></div>', unsafe_allow_html=True)
+
+        col1, col2, col3, col4, col5 = st.columns(5)
+
         with col1:
-            st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
+            st.markdown('<div class="metric-header">Total Participants</div>', unsafe_allow_html=True)
+            st.metric("Total Participants", len(filtered_df), label_visibility="hidden")
+
         with col2:
-            st.plotly_chart(plot_completion_heatmap(filtered_df), use_container_width=True)
-    
-    with tab2:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.plotly_chart(plot_completion_rate(filtered_df), use_container_width=True)
-        with col2:
-            st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
-    
-    with tab3:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
-        with col2:
-            st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
+            st.markdown('<div class="metric-header">Average Points</div>', unsafe_allow_html=True)
+            st.metric("Average Points", f"{filtered_df['points'].mean():.1f}", label_visibility="hidden")
+
+        with col3:
+            st.markdown('<div class="metric-header">Gold Stars</div>', unsafe_allow_html=True)
+            st.metric("Gold Stars", int(filtered_df['gold_stars'].sum()), label_visibility="hidden")
+
+        with col4:
+            st.markdown('<div class="metric-header">Silver Stars</div>', unsafe_allow_html=True)
+            st.metric("Silver Stars", int(filtered_df['silver_stars'].sum()), label_visibility="hidden")
+
+        with col5:
+            st.markdown('<div class="metric-header">Completion Rate</div>', unsafe_allow_html=True)
+            completion_rate = (filtered_df['total_stars'].sum() / (len(filtered_df) * 50)) * 100
+            st.metric("Completion Rate", f"{completion_rate:.1f}%", label_visibility="hidden")
+
+                
+        # Campus metrics with styled headers
+        campus_metrics = get_campus_metrics(filtered_df)
+        
+        # Define campus colors
+        campus_colors = {
+            'UDZ': '#00FF00',  # Green
+            'BCN': '#FFD700',  # Yellow
+            'MAL': '#00FFFF',  # Cyan
+            'MAD': '#FF00FF'   # Magenta
+        }
+        
+        for campus in campus_metrics:
+            st.markdown(f"""
+                <div class="campus-header" style="border-left-color: {campus_colors.get(campus, '#FFFFFF')};">
+                    <h3 style="color: white;">🏛️ {campus} Campus</h3>
+                </div>
+            """, unsafe_allow_html=True)
             
-    # Show filtered data table
-    st.markdown("---")
-    st.subheader("🔍 Detailed Data")
-    st.dataframe(
-        filtered_df,
-        column_config={
-            "points": st.column_config.NumberColumn(format="%.1f"),
-            "streak": st.column_config.NumberColumn(format="%d"),
-            "completed_days": st.column_config.NumberColumn(format="%d"),
-            "gold_stars": st.column_config.NumberColumn(format="%d"),
-            "silver_stars": st.column_config.NumberColumn(format="%d"),
-            "total_stars": st.column_config.NumberColumn(format="%d")
-        },
-        hide_index=False,
-        height=400
-    )
+            metrics = campus_metrics[campus]
+            cols = st.columns(5)
+            
+            with cols[0]:
+                st.markdown('<div class="metric-header">Students</div>', unsafe_allow_html=True)
+                st.metric("Students", metrics['Students'], label_visibility="hidden")
+            with cols[1]:
+                st.markdown('<div class="metric-header">Points (Avg/Max)</div>', unsafe_allow_html=True)
+                st.metric("Points", f"{metrics['Avg Points']}/{metrics['Max Points']}", label_visibility="hidden")
+            with cols[2]:
+                st.markdown('<div class="metric-header">Streak (Avg/Max)</div>', unsafe_allow_html=True)
+                st.metric("Streak", f"{metrics['Avg Streak']}/{metrics['Max Streak']}", label_visibility="hidden")
+            with cols[3]:
+                st.markdown('<div class="metric-header">Stars (Gold/Silver)</div>', unsafe_allow_html=True)
+                st.metric("Stars", f"{metrics['Total Gold']}/{metrics['Total Silver']}", label_visibility="hidden")
+            with cols[4]:
+                st.markdown('<div class="metric-header">Completion Rate</div>', unsafe_allow_html=True)
+                st.metric("Completion Rate", metrics['Completion Rate'], label_visibility="hidden")
+        
+        st.markdown("---")
+        tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
+        
+        with tab1:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(plot_stars_distribution(filtered_df))
+            with col2:
+                st.plotly_chart(plot_completion_heatmap(filtered_df))
+        
+        with tab2:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(plot_completion_rate(filtered_df))
+            with col2:
+                st.plotly_chart(plot_points_vs_days(filtered_df))
+        
+        with tab3:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(plot_campus_progress(filtered_df))
+            with col2:
+                st.plotly_chart(plot_points_distribution(filtered_df))
+        
+        # Detailed Data
+        st.markdown("---")
+        st.subheader("🔍 Detailed Data")
+        st.dataframe(filtered_df)
+
+        # Footer
+        st.markdown(
+            """
+            ---
+            <div style="text-align: center; font-size: 1.1em; padding: 8px; background-color: #333; color: #fff; border-radius: 4px;">
+                Developed by <a href="https://github.com/diegogerwig" target="_blank" style="color: #fff;"><img src="https://github.com/fluidicon.png" height="16" style="vertical-align:middle; padding-right: 4px;"/>Diego Gerwig</a> |
+                <a href="https://profile.intra.42.fr/users/dgerwig-" target="_blank" style="color: #fff;"><img src="https://logowik.com/content/uploads/images/423918.logowik.com.webp" height="16" style="vertical-align:middle; padding-right: 4px;"/>dgerwig-</a> | 2024
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+
+if __name__ == "__main__":
+    main()

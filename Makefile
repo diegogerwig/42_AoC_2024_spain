@@ -7,7 +7,7 @@ VENV_BIN = $(VENV)/bin
 REQUIREMENTS = requirements.txt
 SRC_DIR = src
 APP = app.py
-PYTHONPATH = $(PWD)
+CURRENT_DIR = $(shell pwd)
 
 # Colors for pretty printing
 GREEN = \033[0;32m
@@ -54,9 +54,13 @@ install:
 	@$(VENV_BIN)/$(PIP) install -r $(REQUIREMENTS)
 	@echo "$(GREEN)Installation complete!$(NC)"
 
+# run: check-venv
+# 	@echo "$(GREEN)Starting Streamlit application...$(NC)"
+# 	@cd $(PWD) && PYTHONPATH=$(PWD) $(VENV_BIN)/$(STREAMLIT) run $(APP)
+
 run: check-venv
 	@echo "$(GREEN)Starting Streamlit application...$(NC)"
-	@cd $(PWD) && PYTHONPATH=$(PWD) $(VENV_BIN)/$(STREAMLIT) run $(APP)
+	@cd "$(CURRENT_DIR)" && PYTHONPATH="$(CURRENT_DIR)" $(VENV_BIN)/$(STREAMLIT) run "$(APP)"
 
 clean:
 	@echo "$(GREEN)Cleaning cache files...$(NC)"
