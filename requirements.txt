@@ -21,3 +21,7 @@ streamlit==1.22.0
 typing-extensions==4.7.1
 statsmodels==0.13.5 
 scipy==1.9.3        
+
+# Virtual environment
+setuptools>=65.0.0
+wheel
