@@ -20,7 +20,7 @@ streamlit>=1.25.0
 # Optional dependencies for optimal performance
 typing-extensions==4.7.1
 statsmodels==0.13.5 
-scipy==1.9.3
+scipy>=1.10.0
 
 # Build tools
 setuptools>=68.0.0
