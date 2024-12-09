@@ -390,9 +390,9 @@ def create_metrics_dataframe(df, is_global=True):
     return pd.DataFrame(data)
 
 def main():
-    st.set_page_config(page_title="42 Spain AoC 2024 Dashboard", layout="wide")
+    st.set_page_config(page_title="🎄 42 Spain AoC 2024", layout="wide")
     
-    st.title("💫 42 Spain Advent of Code 2024 Dashboard")
+    st.title("💫 42 Spain | 🎄Advent of Code 2024 Dashboard")
     
     try:
         df = load_data()
