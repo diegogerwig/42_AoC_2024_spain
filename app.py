@@ -66,6 +66,8 @@ def plot_stars_distribution(df):
         var_name='star_type',
         value_name='count'
     )
+    # Asegurarse que star_type es una categoría
+    melted_df['star_type'] = pd.Categorical(melted_df['star_type'])
     
     fig = px.box(
         melted_df,
@@ -114,6 +116,9 @@ def plot_completion_rate(df):
     day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
     completion_data = []
     
+    # Convertir campus a categoría antes de procesar
+    df['campus'] = pd.Categorical(df['campus'])
+    
     for campus in df['campus'].unique():
         campus_data = df[df['campus'] == campus]
         for day in day_columns:
@@ -126,6 +131,8 @@ def plot_completion_rate(df):
             })
     
     completion_df = pd.DataFrame(completion_data)
+    # Asegurar que Campus es una categoría
+    completion_df['Campus'] = pd.Categorical(completion_df['Campus'])
     
     fig = px.line(
         completion_df,
@@ -142,6 +149,10 @@ def plot_completion_rate(df):
 
 def plot_points_vs_days(df):
     """Create scatter plot of points vs completed days"""
+    # Asegurar que campus es una categoría
+    df = df.copy()
+    df['campus'] = pd.Categorical(df['campus'])
+    
     fig = px.scatter(
         df,
         x="completed_days",
@@ -158,19 +169,22 @@ def plot_points_vs_days(df):
 
 def plot_campus_progress(df):
     """Create radar chart of campus performance"""
-    campus_stats = df.groupby('campus').agg({
-        'points': 'mean',
-        'streak': 'mean',
-        'completed_days': 'mean',
-        'gold_stars': 'mean',
-        'silver_stars': 'mean'
-    }).round(2)
+    campus_stats = (df.groupby('campus', as_index=False)
+                   .agg({
+                       'points': 'mean',
+                       'streak': 'mean',
+                       'completed_days': 'mean',
+                       'gold_stars': 'mean',
+                       'silver_stars': 'mean'
+                   })
+                   .round(2)
+                   .set_index('campus'))
     
     fig = go.Figure()
     
     for campus in campus_stats.index:
         fig.add_trace(go.Scatterpolar(
-            r=campus_stats.loc[campus],
+            r=campus_stats.loc[(campus,)],  
             theta=campus_stats.columns,
             name=campus,
             line_color=CAMPUS_COLORS.get(campus, '#808080')
@@ -187,6 +201,10 @@ def plot_campus_progress(df):
 
 def plot_points_distribution(df):
     """Create box plot of points distribution by campus"""
+    # Asegurar que campus es una categoría
+    df = df.copy()
+    df['campus'] = pd.Categorical(df['campus'])
+    
     fig = px.box(
         df,
         x="campus",
@@ -476,6 +494,15 @@ def main():
                     vertical-align: middle;
                     line-height: normal;
                     white-space: nowrap;
+                }
+
+                /* Tab styling */
+                button[data-baseweb="tab"] {
+                    font-size: 1.2rem !important;
+                    font-weight: bold !important;
+                }
+                button[data-baseweb="tab"] p {
+                    font-size: 1.2rem !important;
                 }
             </style>
         """, unsafe_allow_html=True)
