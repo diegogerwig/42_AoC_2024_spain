@@ -53,9 +53,9 @@ def create_metrics_dataframe(df, is_global=True):
         data = {
             'Section': ['🌍 Global'],
             'Students': [len(df)],
-            'Points (Avg/Max)': [f"{df['points'].mean():.1f}/{df['points'].max():.1f}"],
-            'Streak (Avg/Max)': [f"{df['streak'].mean():.1f}/{df['streak'].max()}"],
-            'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())}/{int(df['silver_stars'].sum())}"],
+            'Points (Avg/Max)': [f"{df['points'].mean():.1f} / {df['points'].max():.1f}"],
+            'Streak (Avg/Max)': [f"{df['streak'].mean():.1f} / {df['streak'].max()}"],
+            'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())} / {int(df['silver_stars'].sum())}"],
             'Completion Rate': [f"{completion_rate:.1f}%"]
         }
     else:
@@ -106,30 +106,64 @@ def plot_stars_distribution(df):
     fig.update_layout(height=500, title_x=0.5)
     return fig
 
-def plot_completion_heatmap(df):
-    """Create challenge completion heatmap"""
+# def plot_completion_heatmap(df):
+#     """Create challenge completion heatmap"""
+#     day_columns = [col for col in df.columns if col.startswith('day_')]
+#     completion_matrix = df[day_columns].values
+    
+#     fig = go.Figure(data=go.Heatmap(
+#         z=completion_matrix.T,
+#         colorscale=[
+#             [0, 'white'],
+#             [0.5, '#C0C0C0'],
+#             [1, '#FFD700']
+#         ],
+#         zmin=0,
+#         zmax=2
+#     ))
+    
+#     fig.update_layout(
+#         title='Challenge Completion Status',
+#         title_x=0.5,
+#         xaxis_title='Participant Index',
+#         yaxis_title='Day',
+#         height=500
+#     )
+#     return fig
+
+
+def plot_star_totals_by_campus(df):
+    """
+    Create a line chart that shows the total number of stars per day for each campus.
+
+    Parameters:
+    df (pandas.DataFrame): DataFrame containing the data, with columns for each day and columns for the stars per campus.
+
+    Returns:
+    plotly.graph_objects.Figure: Plotly Figure object representing the chart.
+    """
     day_columns = [col for col in df.columns if col.startswith('day_')]
-    completion_matrix = df[day_columns].values
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=completion_matrix.T,
-        colorscale=[
-            [0, 'white'],
-            [0.5, '#C0C0C0'],
-            [1, '#FFD700']
-        ],
-        zmin=0,
-        zmax=2
-    ))
-    
+    campuses = [col for col in df.columns if col not in day_columns]
+
+    fig = go.Figure()
+
+    for campus in campuses:
+        fig.add_trace(go.Scatter(
+            x=day_columns,
+            y=df[campus],
+            mode='lines+markers',
+            name=campus
+        ))
+
     fig.update_layout(
-        title='Challenge Completion Status',
-        title_x=0.5,
-        xaxis_title='Participant Index',
-        yaxis_title='Day',
+        title='Total Stars by Campus per Day',
+        xaxis_title='Day',
+        yaxis_title='Number of Stars',
         height=500
     )
+
     return fig
+
 
 def plot_completion_rate(df):
     """Plot completion rate over time by campus"""

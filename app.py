@@ -4,7 +4,8 @@ from src.data_processing import (
     load_data,
     create_metrics_dataframe,
     plot_stars_distribution,
-    plot_completion_heatmap,
+    # plot_completion_heatmap,
+    plot_star_totals_by_campus,
     plot_completion_rate,
     plot_points_vs_days,
     plot_campus_progress,
@@ -379,14 +380,7 @@ def main():
             unsafe_allow_html=True
         )
 
-        # st.markdown(
-        #     ranking_df.style
-        #     .hide(axis="index")
-        #     .to_html(escape=False, classes=['ranking-table']),
-        #     unsafe_allow_html=True
-        # )
 
- 
         # Visualizations
         st.markdown("---")
         tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
@@ -396,7 +390,7 @@ def main():
             with col1:
                 st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_completion_heatmap(filtered_df), use_container_width=True)
+                st.plotly_chart(plot_star_totals_by_campus(filtered_df), use_container_width=True)
         
         with tab2:
             col1, col2 = st.columns(2)
