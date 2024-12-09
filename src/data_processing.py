@@ -186,21 +186,32 @@ def plot_points_vs_days(df):
 
 def plot_campus_progress(df):
     """Create radar chart of campus performance"""
-    # Add observed=True to groupby
-    campus_stats = df.groupby('campus', observed=True).agg({
-        'points': 'mean',
-        'streak': 'mean',
-        'completed_days': 'mean',
-        'gold_stars': 'mean',
-        'silver_stars': 'mean'
-    }).round(2)
+    # Crear una copia y convertir campus a categoría
+    df = df.copy()
+    df['campus'] = pd.Categorical(df['campus'])
+    
+    # Calcular estadísticas sin usar groupby
+    campus_stats = pd.DataFrame()
+    
+    for campus in df['campus'].unique():
+        campus_data = df[df['campus'] == campus]
+        stats = {
+            'points': campus_data['points'].mean(),
+            'streak': campus_data['streak'].mean(),
+            'completed_days': campus_data['completed_days'].mean(),
+            'gold_stars': campus_data['gold_stars'].mean(),
+            'silver_stars': campus_data['silver_stars'].mean()
+        }
+        campus_stats[campus] = pd.Series(stats)
+    
+    campus_stats = campus_stats.round(2)
     
     fig = go.Figure()
     
-    for campus in campus_stats.index:
+    for campus in campus_stats.columns:
         fig.add_trace(go.Scatterpolar(
-            r=campus_stats.loc[(campus,)],  # Use tuple for single element
-            theta=campus_stats.columns,
+            r=campus_stats[campus],
+            theta=campus_stats.index,
             name=campus,
             line_color=CAMPUS_COLORS.get(campus, '#808080')
         ))
