@@ -110,7 +110,8 @@ def plot_completion_heatmap(df):
 
 def plot_completion_rate(df):
     """Plot completion rate over time by campus"""
-    day_columns = [col for col in df.columns if col.startswith('day_')]
+    current_day = get_current_aoc_day(df)
+    day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
     completion_data = []
     
     for campus in df['campus'].unique():
@@ -208,82 +209,139 @@ def plot_points_distribution(df):
 
 def apply_filters(df):
     """Apply user-selected filters to the dataframe"""
+    # Initialize session state for filters if not exists
+    if 'filter_state' not in st.session_state:
+        st.session_state.filter_state = {
+            'campus': "All",
+            'points_range': (float(df["points"].min()), float(df["points"].max())),
+            'gold_range': (int(df["gold_stars"].min()), int(df["gold_stars"].max())),
+            'silver_range': (int(df["silver_stars"].min()), int(df["silver_stars"].max())),
+            'streak_range': (int(df["streak"].min()), int(df["streak"].max())),
+            'days_range': (int(df["completed_days"].min()), int(df["completed_days"].max())),
+            'search_login': "",
+            'sort_by': "Points",
+            'sort_order': "Descending"
+        }
+
     st.sidebar.header("🎯 Filters")
     
+    # Reset filters button - debe estar al inicio para que pueda resetear todos los valores
+    if st.sidebar.button("🔄 Reset Filters"):
+        # Reset all filters to default values
+        st.session_state.filter_state = {
+            'campus': "All",
+            'points_range': (float(df["points"].min()), float(df["points"].max())),
+            'gold_range': (int(df["gold_stars"].min()), int(df["gold_stars"].max())),
+            'silver_range': (int(df["silver_stars"].min()), int(df["silver_stars"].max())),
+            'streak_range': (int(df["streak"].min()), int(df["streak"].max())),
+            'days_range': (int(df["completed_days"].min()), int(df["completed_days"].max())),
+            'search_login': "",
+            'sort_by': "Points",
+            'sort_order': "Descending"
+        }
+        st.experimental_rerun()
+
     # Campus filter
     campus_options = ["All"] + sorted(df["campus"].unique().tolist())
-    selected_campus = st.sidebar.selectbox("📍 Select Campus", campus_options)
+    st.session_state.filter_state['campus'] = st.sidebar.selectbox(
+        "📍 Select Campus", 
+        campus_options,
+        key='campus_select',
+        index=campus_options.index(st.session_state.filter_state['campus'])
+    )
     
     # Points range filter
-    points_range = st.sidebar.slider(
+    st.session_state.filter_state['points_range'] = st.sidebar.slider(
         "🎮 Points Range",
         min_value=float(df["points"].min()),
         max_value=float(df["points"].max()),
-        value=(float(df["points"].min()), float(df["points"].max()))
+        value=st.session_state.filter_state['points_range'],
+        key='points_slider'
     )
     
     # Star filters
-    gold_range = st.sidebar.slider(
+    st.session_state.filter_state['gold_range'] = st.sidebar.slider(
         "⭐ Gold Stars",
         min_value=int(df["gold_stars"].min()),
         max_value=int(df["gold_stars"].max()),
-        value=(int(df["gold_stars"].min()), int(df["gold_stars"].max()))
+        value=st.session_state.filter_state['gold_range'],
+        key='gold_slider'
     )
     
-    silver_range = st.sidebar.slider(
+    st.session_state.filter_state['silver_range'] = st.sidebar.slider(
         "🌟 Silver Stars",
         min_value=int(df["silver_stars"].min()),
         max_value=int(df["silver_stars"].max()),
-        value=(int(df["silver_stars"].min()), int(df["silver_stars"].max()))
+        value=st.session_state.filter_state['silver_range'],
+        key='silver_slider'
     )
 
     # Streak filter
-    streak_range = st.sidebar.slider(
+    st.session_state.filter_state['streak_range'] = st.sidebar.slider(
         "🔥 Streak Range",
         min_value=int(df["streak"].min()),
         max_value=int(df["streak"].max()),
-        value=(int(df["streak"].min()), int(df["streak"].max()))
+        value=st.session_state.filter_state['streak_range'],
+        key='streak_slider'
     )
 
     # Completed days filter
-    days_range = st.sidebar.slider(
+    st.session_state.filter_state['days_range'] = st.sidebar.slider(
         "📅 Days Completed",
         min_value=int(df["completed_days"].min()),
         max_value=int(df["completed_days"].max()),
-        value=(int(df["completed_days"].min()), int(df["completed_days"].max()))
+        value=st.session_state.filter_state['days_range'],
+        key='days_slider'
     )
 
     # Search by login
-    search_login = st.sidebar.text_input("🔍 Search by Login").strip().lower()
+    st.session_state.filter_state['search_login'] = st.sidebar.text_input(
+        "🔍 Search by Login",
+        value=st.session_state.filter_state['search_login'],
+        key='search_input'
+    ).strip().lower()
 
     # Apply filters
     mask = (
-        (df["points"].between(points_range[0], points_range[1])) &
-        (df["streak"].between(streak_range[0], streak_range[1])) &
-        (df["completed_days"].between(days_range[0], days_range[1])) &
-        (df["gold_stars"].between(gold_range[0], gold_range[1])) &
-        (df["silver_stars"].between(silver_range[0], silver_range[1]))
+        (df["points"].between(st.session_state.filter_state['points_range'][0], 
+                            st.session_state.filter_state['points_range'][1])) &
+        (df["streak"].between(st.session_state.filter_state['streak_range'][0], 
+                            st.session_state.filter_state['streak_range'][1])) &
+        (df["completed_days"].between(st.session_state.filter_state['days_range'][0], 
+                                    st.session_state.filter_state['days_range'][1])) &
+        (df["gold_stars"].between(st.session_state.filter_state['gold_range'][0], 
+                                st.session_state.filter_state['gold_range'][1])) &
+        (df["silver_stars"].between(st.session_state.filter_state['silver_range'][0], 
+                                  st.session_state.filter_state['silver_range'][1]))
     )
     
-    if selected_campus != "All":
-        mask = mask & (df["campus"] == selected_campus)
+    if st.session_state.filter_state['campus'] != "All":
+        mask = mask & (df["campus"] == st.session_state.filter_state['campus'])
     
-    if search_login:
-        mask = mask & (df["login"].str.lower().str.contains(search_login))
+    if st.session_state.filter_state['search_login']:
+        mask = mask & (df["login"].str.lower().str.contains(st.session_state.filter_state['search_login']))
     
     filtered_df = df[mask].copy()
     
     # Sort options
     st.sidebar.subheader("📊 Sort Options")
-    sort_by = st.sidebar.selectbox(
+    st.session_state.filter_state['sort_by'] = st.sidebar.selectbox(
         "Sort by",
-        ["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days Completed"]
+        ["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days Completed"],
+        key='sort_select',
+        index=["Points", "Gold Stars", "Silver Stars", "Total Stars", "Streak", "Days Completed"].index(st.session_state.filter_state['sort_by'])
     )
-    sort_order = st.sidebar.radio("Order", ["Descending", "Ascending"])
+    
+    st.session_state.filter_state['sort_order'] = st.sidebar.radio(
+        "Order", 
+        ["Descending", "Ascending"],
+        key='sort_order',
+        index=["Descending", "Ascending"].index(st.session_state.filter_state['sort_order'])
+    )
     
     # Apply sorting
-    sort_column = sort_by.lower().replace(" ", "_")
-    ascending = sort_order == "Ascending"
+    sort_column = st.session_state.filter_state['sort_by'].lower().replace(" ", "_")
+    ascending = st.session_state.filter_state['sort_order'] == "Ascending"
     filtered_df = filtered_df.sort_values(sort_column, ascending=ascending).reset_index(drop=True)
 
     # Filter summary
@@ -291,35 +349,43 @@ def apply_filters(df):
     st.sidebar.subheader("📈 Filter Summary")
     st.sidebar.write(f"Showing {len(filtered_df)} of {len(df)} participants")
     
-    # Reset filters button
-    if st.sidebar.button("🔄 Reset Filters"):
-        st.rerun()
-    
     return filtered_df
+
+def get_current_aoc_day(df):
+    """Get current day based on available day columns"""
+    return len([col for col in df.columns if col.startswith('day_')])
 
 
 def create_metrics_dataframe(df, is_global=True):
     """Create a formatted dataframe for metrics"""
+    current_day = get_current_aoc_day(df)
+    max_possible_stars = current_day * 2
+
     if is_global:
+        completion_rate = (df['total_stars'].sum() / (len(df) * max_possible_stars)) * 100
+        
         data = {
             'Section': ['🌍 Global'],
             'Students': [len(df)],
             'Points (Avg/Max)': [f"{df['points'].mean():.1f}/{df['points'].max():.1f}"],
             'Streak (Avg/Max)': [f"{df['streak'].mean():.1f}/{df['streak'].max()}"],
             'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())}/{int(df['silver_stars'].sum())}"],
-            'Completion Rate': [f"{(df['total_stars'].sum() / (len(df) * 50)) * 100:.1f}%"]
+            'Completion Rate': [f"{completion_rate:.1f}%"]
         }
     else:
         data = []
         for campus in sorted(df['campus'].unique()):
             campus_data = df[df['campus'] == campus]
+            campus_completion = (campus_data['total_stars'].sum() / 
+                               (len(campus_data) * max_possible_stars)) * 100
+            
             data.append({
                 'Section': f"🏛️ {campus}",
                 'Students': len(campus_data),
                 'Points (Avg/Max)': f"{campus_data['points'].mean():.1f}/{campus_data['points'].max():.1f}",
                 'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f}/{campus_data['streak'].max()}",
                 'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())}/{int(campus_data['silver_stars'].sum())}",
-                'Completion Rate': f"{(campus_data['total_stars'].sum() / (len(campus_data) * 50)) * 100:.1f}%"
+                'Completion Rate': f"{campus_completion:.1f}%"
             })
     return pd.DataFrame(data)
 
@@ -453,7 +519,10 @@ def main():
         # Detailed Data
         st.markdown("---")
         st.subheader("🔍 Detailed Data")
-        st.dataframe(filtered_df)
+        st.dataframe(
+            filtered_df,
+            use_container_width=True,  
+        )
 
         # Footer
         st.markdown(

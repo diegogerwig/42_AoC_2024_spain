@@ -1,4 +1,3 @@
-# src/scraper.py
 import requests
 import pandas as pd
 import streamlit as st
@@ -37,30 +36,34 @@ class AOCScraper:
             star_cells = cells[4:]
             for i, cell in enumerate(star_cells):
                 day_num = i + 1
-                stars = cell.find_all('span', class_='star1')
                 
-                # Count stars and determine type
-                star_count = len(stars)
-                if star_count == 0:
-                    value = 0  # No stars
-                elif star_count == 1:
-                    value = 1  # Silver star
-                    silver_stars += 1
-                    if completed_days < day_num:
-                        completed_days = day_num
-                elif star_count == 2:
-                    value = 2  # Gold star
-                    gold_stars += 1
-                    if completed_days < day_num:
-                        completed_days = day_num
-
-                data[f'day_{day_num}'] = value
+                # Get all star spans
+                spans = cell.find_all('span')
+                
+                # Count gold and silver stars separately
+                day_gold = len(cell.find_all('span', class_='star1'))  # Oro
+                day_silver = len(cell.find_all('span', class_='star0'))  # Plata
+                
+                # Limitar a máximo 2 estrellas por tipo
+                day_gold = min(day_gold, 2)
+                day_silver = min(day_silver, 2)
+                
+                # Actualizar contadores totales
+                gold_stars += day_gold
+                silver_stars += day_silver
+                
+                # Update completed days if any stars were earned
+                if (day_gold + day_silver > 0) and day_num > completed_days:
+                    completed_days = day_num
+                
+                # Store total stars for the day (max 2)
+                data[f'day_{day_num}'] = min(day_gold + day_silver, 2)
 
             # Add star totals
             data['completed_days'] = completed_days
             data['gold_stars'] = gold_stars
             data['silver_stars'] = silver_stars
-            data['total_stars'] = silver_stars + gold_stars
+            data['total_stars'] = gold_stars + silver_stars
 
             return data
             
@@ -129,9 +132,9 @@ class AOCScraper:
             'streak': 'Current streak of consecutive days completed',
             'points': 'Total points earned',
             'completed_days': 'Highest day number with at least one star',
-            'gold_stars': 'Total number of gold stars (2 per day)',
-            'silver_stars': 'Total number of silver stars (1 per day)',
-            'total_stars': 'Total number of stars (silver + gold)',
-            **{f'day_{i}': f'Day {i} completion (0=none, 1=silver star, 2=gold stars)' 
+            'gold_stars': 'Total number of gold stars',
+            'silver_stars': 'Total number of silver stars',
+            'total_stars': 'Total number of stars (gold + silver, max 2 per day)',
+            **{f'day_{i}': f'Day {i} total stars (0-2, can be gold or silver)' 
                for i in range(1, 26)}
         }
