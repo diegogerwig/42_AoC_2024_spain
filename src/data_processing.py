@@ -48,21 +48,21 @@ def create_metrics_dataframe(df, is_global=True):
     max_possible_stars = current_day * 2
 
     if is_global:
-        completion_rate = (df['total_stars'].sum() / (len(df) * max_possible_stars)) * 100
+        success_rate = (df['total_stars'].sum() / (len(df) * max_possible_stars)) * 100
         
         data = {
             'Section': ['🌍 Global'],
             'Students': [len(df)],
-            'Points (Avg/Max)': [f"{df['points'].mean():.1f} / {df['points'].max():.1f}"],
-            'Streak (Avg/Max)': [f"{df['streak'].mean():.1f} / {df['streak'].max()}"],
-            'Stars (Gold/Silver)': [f"{int(df['gold_stars'].sum())} / {int(df['silver_stars'].sum())}"],
-            'Completion Rate': [f"{completion_rate:.1f}%"]
+            'Points (Avg / Max)': [f"{df['points'].mean():.1f} / {df['points'].max():.1f}"],
+            'Streak (Avg / Max)': [f"{df['streak'].mean():.1f} / {df['streak'].max()}"],
+            'Stars (Gold / Silver)': [f"{int(df['gold_stars'].sum())} / {int(df['silver_stars'].sum())}"],
+            'Success Rate': [f"{success_rate:.1f}%"]
         }
     else:
         data = []
         for campus in sorted(df['campus'].unique()):
             campus_data = df[df['campus'] == campus]
-            campus_completion = (campus_data['total_stars'].sum() / 
+            campus_success = (campus_data['total_stars'].sum() / 
                                (len(campus_data) * max_possible_stars)) * 100
             
             # Create colored campus name
@@ -71,10 +71,10 @@ def create_metrics_dataframe(df, is_global=True):
             data.append({
                 'Section': colored_campus,
                 'Students': len(campus_data),
-                'Points (Avg/Max)': f"{campus_data['points'].mean():.1f}/{campus_data['points'].max():.1f}",
-                'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f}/{campus_data['streak'].max()}",
-                'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())}/{int(campus_data['silver_stars'].sum())}",
-                'Completion Rate': f"{campus_completion:.1f}%"
+                'Points (Avg/Max)': f"{campus_data['points'].mean():.1f} / {campus_data['points'].max():.1f}",
+                'Streak (Avg/Max)': f"{campus_data['streak'].mean():.1f} / {campus_data['streak'].max()}",
+                'Stars (Gold/Silver)': f"{int(campus_data['gold_stars'].sum())} / {int(campus_data['silver_stars'].sum())}",
+                'Success Rate': f"{campus_success:.1f}%"
             })
     return pd.DataFrame(data)
 
@@ -106,13 +106,13 @@ def plot_stars_distribution(df):
     fig.update_layout(height=500, title_x=0.5)
     return fig
 
-# def plot_completion_heatmap(df):
-#     """Create challenge completion heatmap"""
+# def plot_success_heatmap(df):
+#     """Create challenge success heatmap"""
 #     day_columns = [col for col in df.columns if col.startswith('day_')]
-#     completion_matrix = df[day_columns].values
+#     success_matrix = df[day_columns].values
     
 #     fig = go.Figure(data=go.Heatmap(
-#         z=completion_matrix.T,
+#         z=success_matrix.T,
 #         colorscale=[
 #             [0, 'white'],
 #             [0.5, '#C0C0C0'],
@@ -123,7 +123,7 @@ def plot_stars_distribution(df):
 #     ))
     
 #     fig.update_layout(
-#         title='Challenge Completion Status',
+#         title='Challenge Success Status',
 #         title_x=0.5,
 #         xaxis_title='Participant Index',
 #         yaxis_title='Day',
@@ -165,11 +165,11 @@ def plot_star_totals_by_campus(df):
     return fig
 
 
-def plot_completion_rate(df):
-    """Plot completion rate over time by campus"""
+def plot_success_rate(df):
+    """Plot success rate over time by campus"""
     current_day = get_current_aoc_day(df)
     day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
-    completion_data = []
+    success_data = []
     
     # Usar un enfoque más directo sin groupby
     for campus in df['campus'].unique():
@@ -178,24 +178,24 @@ def plot_completion_rate(df):
         for day in day_columns:
             day_num = int(day.split('_')[1])
             # Calcular la tasa de finalización
-            completion = (df[campus_mask][day] > 0).sum() / campus_mask.sum() * 100
-            completion_data.append({
+            success = (df[campus_mask][day] > 0).sum() / campus_mask.sum() * 100
+            success_data.append({
                 'Day': day_num,
-                'Rate': completion,
+                'Rate': success,
                 'Campus': campus  # No necesitamos una tupla aquí
             })
     
     # Crear DataFrame con los resultados
-    completion_df = pd.DataFrame(completion_data)
+    success_df = pd.DataFrame(success_data)
     
     # Crear el gráfico
     fig = px.line(
-        completion_df,
+        success_df,
         x='Day',
         y='Rate',
         color='Campus',
-        title='Daily Completion Rate by Campus',
-        labels={'Rate': 'Completion Rate (%)'},
+        title='Daily Success Rate by Campus',
+        labels={'Rate': 'Success Rate (%)'},
         color_discrete_map=CAMPUS_COLORS
     )
     
