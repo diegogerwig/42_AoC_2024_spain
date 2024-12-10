@@ -1,17 +1,8 @@
 import streamlit as st
 import pandas as pd
-from src.data_processing import (
-    load_data,
-    create_metrics_dataframe,
-    plot_stars_distribution,
-    plot_star_totals_by_campus,
-    plot_success_rate,
-    plot_points_vs_days,
-    plot_campus_progress,
-    plot_points_distribution,
-    CAMPUS_COLORS
-)
-from src.utils import suppress_plotly_warnings
+from src.app_utils import *
+from src.app_operations import *
+from src.app_visualization import *
 
 import logging
 
