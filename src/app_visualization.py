@@ -10,6 +10,46 @@ CAMPUS_COLORS = {
     'MAD': '#FF00FF'   # Magenta
 }
 
+
+# Define common styling
+def apply_common_style(fig):
+    """Apply common styling to all plots"""
+    dark_gray = '#2F2F2F'
+    
+    fig.update_layout(
+        plot_bgcolor=dark_gray,
+        paper_bgcolor=dark_gray,
+        font=dict(color='white'),
+        margin=dict(l=60, r=60, t=80, b=60),
+        legend=dict(bgcolor=dark_gray),
+        height=500,
+        title=dict(
+            x=0.5,
+            y=0.95,
+            xanchor='center',
+            yanchor='top',
+            font=dict(
+                size=24
+            )
+        ),
+        xaxis=dict(
+            gridcolor='rgba(255,255,255,0.1)',
+            zerolinecolor='rgba(255,255,255,0.2)'
+        ),
+        yaxis=dict(
+            gridcolor='rgba(255,255,255,0.1)',
+            zerolinecolor='rgba(255,255,255,0.2)',
+            rangemode='nonnegative',  # Force y-axis to start at 0
+            range=[0, None]  # Explicitly set minimum to 0
+        )
+    )
+    
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.1)')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='rgba(255,255,255,0.1)')
+    
+    return fig
+
+
 def plot_stars_distribution(df):
     """Plot distribution of gold and silver stars"""
     melted_df = pd.melt(
@@ -18,7 +58,6 @@ def plot_stars_distribution(df):
         var_name='star_type',
         value_name='count'
     )
-    # Convert star_type to categorical
     melted_df['star_type'] = pd.Categorical(melted_df['star_type'])
     
     fig = px.box(
@@ -35,32 +74,64 @@ def plot_stars_distribution(df):
         category_orders={"star_type": ["gold_stars", "silver_stars"]}
     )
     
-    fig.update_layout(height=500, title_x=0.5)
+    fig = apply_common_style(fig)
+    fig.update_layout(showlegend=False)  # Remove legend
+    
     return fig
+
 
 def plot_star_totals_by_campus(df):
-    """Create a line chart that shows the total number of stars per day for each campus."""
-    day_columns = [col for col in df.columns if col.startswith('day_')]
-    campuses = [col for col in df.columns if col not in day_columns]
-
-    fig = go.Figure()
-
-    for campus in campuses:
-        fig.add_trace(go.Scatter(
-            x=day_columns,
-            y=df[campus],
-            mode='lines+markers',
-            name=campus
-        ))
-
-    fig.update_layout(
+    """Create a line chart that shows the total number of stars per day for each campus and total."""
+    current_day = len([col for col in df.columns if col.startswith('day_')])
+    day_columns = [f'day_{i}' for i in range(1, current_day + 1)]
+    
+    stars_data = []
+    
+    for campus in df['campus'].unique():
+        campus_mask = df['campus'] == campus
+        for day in day_columns:
+            day_num = int(day.split('_')[1])
+            total_stars = df[campus_mask][day].sum()
+            stars_data.append({
+                'Day': day_num,
+                'Stars': total_stars,
+                'Campus': campus
+            })
+    
+    for day in day_columns:
+        day_num = int(day.split('_')[1])
+        total_stars = df[day].sum()
+        stars_data.append({
+            'Day': day_num,
+            'Stars': total_stars,
+            'Campus': 'ALL'
+        })
+    
+    stars_df = pd.DataFrame(stars_data)
+    
+    colors = CAMPUS_COLORS.copy()
+    colors['ALL'] = '#FFFFFF'
+    
+    fig = px.line(
+        stars_df,
+        x='Day',
+        y='Stars',
+        color='Campus',
         title='Total Stars by Campus per Day',
-        xaxis_title='Day',
-        yaxis_title='Number of Stars',
-        height=500
+        labels={'Stars': 'Number of Stars'},
+        color_discrete_map=colors
     )
+    
+    for trace in fig.data:
+        if trace.name == 'ALL':
+            trace.line.width = 4
+            trace.line.dash = None
+    
+    fig = apply_common_style(fig)
+    fig.update_layout(yaxis=dict(rangemode='nonnegative'))
 
     return fig
+
 
 def plot_success_rate(df):
     """Plot success rate over time by campus"""
@@ -91,8 +162,8 @@ def plot_success_rate(df):
         color_discrete_map=CAMPUS_COLORS
     )
     
-    fig.update_layout(height=500, title_x=0.5)
-    return fig
+    return apply_common_style(fig)
+
 
 def plot_points_vs_days(df):
     """Create scatter plot of points vs completed days"""
@@ -110,47 +181,75 @@ def plot_points_vs_days(df):
         color_discrete_map=CAMPUS_COLORS
     )
     
-    fig.update_layout(height=500, title_x=0.5)
-    return fig
+    return apply_common_style(fig)
+
 
 def plot_campus_progress(df):
-    """Create radar chart of campus performance"""
-    df = df.copy()
-    df['campus'] = pd.Categorical(df['campus'])
+    """Create a clean trend visualization focusing on key metrics"""
+    # Calculate weekly averages to reduce noise
+    current_day = len([col for col in df.columns if col.startswith('day_')])
+    days = list(range(1, current_day + 1))
     
-    campus_stats = pd.DataFrame()
+    trend_data = []
     
     for campus in df['campus'].unique():
         campus_data = df[df['campus'] == campus]
-        stats = {
-            'points': campus_data['points'].mean(),
-            'streak': campus_data['streak'].mean(),
-            'completed_days': campus_data['completed_days'].mean(),
-            'gold_stars': campus_data['gold_stars'].mean(),
-            'silver_stars': campus_data['silver_stars'].mean()
-        }
-        campus_stats[campus] = pd.Series(stats)
+        
+        # Calculate average points for each day
+        for day in days:
+            day_col = f'day_{day}'
+            avg_points = campus_data[day_col].mean()
+            
+            trend_data.append({
+                'Campus': campus,
+                'Day': day,
+                'Average_Points': avg_points
+            })
     
-    campus_stats = campus_stats.round(2)
+    trend_df = pd.DataFrame(trend_data)
     
-    fig = go.Figure()
-    
-    for campus in campus_stats.columns:
-        fig.add_trace(go.Scatterpolar(
-            r=campus_stats[campus],
-            theta=campus_stats.index,
-            name=campus,
-            line_color=CAMPUS_COLORS.get(campus, '#808080')
-        ))
-    
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, showticklabels=True)),
-        showlegend=True,
-        title='Campus Performance Overview',
-        height=500,
-        title_x=0.5
+    # Create the plot
+    fig = px.line(
+        trend_df,
+        x='Day',
+        y='Average_Points',
+        color='Campus',
+        title='Campus Progress Over Time',
+        labels={'Average_Points': 'Average Points per Student'},
+        color_discrete_map=CAMPUS_COLORS
     )
+    
+    # Apply styling
+    fig = apply_common_style(fig)
+    
+    # Additional customization for clarity
+    fig.update_layout(
+        # More space between elements
+        margin=dict(l=80, r=80, t=100, b=80),
+        
+        # Improve legend positioning
+        legend=dict(
+            orientation='h',
+            yanchor='bottom',
+            y=1.02,
+            xanchor='center',
+            x=0.5
+        ),
+        
+        # Additional styling
+        yaxis_title='Average Points',
+        xaxis_title='Day Number',
+        hovermode='x unified'
+    )
+    
+    # Make lines thicker for better visibility
+    fig.update_traces(
+        line=dict(width=3),
+        mode='lines'  # Remove markers for cleaner look
+    )
+    
     return fig
+
 
 def plot_points_distribution(df):
     """Create box plot of points distribution by campus"""
@@ -167,12 +266,17 @@ def plot_points_distribution(df):
         color_discrete_map=CAMPUS_COLORS
     )
     
+    fig = apply_common_style(fig)
+    
     fig.add_hline(
         y=df['points'].median(),
         line_dash="dash",
-        line_color="gray",
-        annotation_text=f"Global Median: {df['points'].median():.1f}"
+        line_color="white",
+        annotation=dict(
+            text=f"Global Median: {df['points'].median():.1f}",
+            font=dict(color="white")
+        )
     )
     
-    fig.update_layout(height=500, title_x=0.5, showlegend=False)
+    fig.update_layout(showlegend=False)
     return fig
