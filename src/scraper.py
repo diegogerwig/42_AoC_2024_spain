@@ -1,9 +1,19 @@
 import requests
 import pandas as pd
-import streamlit as st
 from bs4 import BeautifulSoup
 from typing import Optional, Dict, List
 import traceback
+from datetime import datetime
+import os
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 class AOCScraper:
     def __init__(self):
@@ -11,6 +21,9 @@ class AOCScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
+        self.data_dir = './data'
+        os.makedirs(self.data_dir, exist_ok=True)
+        logger.info(f"Data directory initialized: {self.data_dir}")
 
     def _process_row(self, row) -> Optional[Dict]:
         """Process a single row of data."""
@@ -41,14 +54,14 @@ class AOCScraper:
                 spans = cell.find_all('span')
                 
                 # Count gold and silver stars separately
-                day_gold = len(cell.find_all('span', class_='star1'))  # Oro
-                day_silver = len(cell.find_all('span', class_='star0'))  # Plata
+                day_gold = len(cell.find_all('span', class_='star1'))  # Gold
+                day_silver = len(cell.find_all('span', class_='star0'))  # Silver
                 
-                # Limitar a máximo 2 estrellas por tipo
+                # Limit to maximum 2 stars per type
                 day_gold = min(day_gold, 2)
                 day_silver = min(day_silver, 2)
                 
-                # Actualizar contadores totales
+                # Update total counters
                 gold_stars += day_gold
                 silver_stars += day_silver
                 
@@ -68,7 +81,7 @@ class AOCScraper:
             return data
             
         except Exception as e:
-            st.error(f"Error processing row: {str(e)}")
+            logger.error(f"Error processing row: {str(e)}")
             return None
 
     def _convert_numeric_columns(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -90,6 +103,7 @@ class AOCScraper:
     def scrape_data(self) -> pd.DataFrame:
         """Scrape AOC rankings data."""
         try:
+            logger.info(f"Fetching data from {self.url}")
             response = requests.get(self.url, headers=self.headers, timeout=10)
             response.raise_for_status()
             
@@ -97,32 +111,57 @@ class AOCScraper:
             
             table = soup.find('table', id='rankingTable')
             if not table:
-                st.error("No se encontró la tabla de ranking")
+                logger.error("Ranking table not found")
                 return pd.DataFrame()
 
             tbody = table.find('tbody')
             if not tbody:
-                st.error("No se encontró el cuerpo de la tabla")
+                logger.error("Table body not found")
                 return pd.DataFrame()
 
             data = []
+            logger.info("Processing table rows...")
             for row in tbody.find_all('tr'):
                 row_data = self._process_row(row)
                 if row_data:
                     data.append(row_data)
 
             if not data:
-                st.error("No se encontraron datos")
+                logger.error("No data found in table")
                 return pd.DataFrame()
 
+            logger.info("Converting data to DataFrame...")
             df = pd.DataFrame(data)
             df = self._convert_numeric_columns(df)
             return df.sort_values('points', ascending=False).reset_index(drop=True)
             
         except Exception as e:
-            st.error(f"Error scraping data: {str(e)}")
-            st.write("Traceback:", traceback.format_exc())
+            logger.error(f"Error scraping data: {str(e)}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return pd.DataFrame()
+
+    def save_data(self, df: pd.DataFrame) -> str:
+        """Save DataFrame to CSV and return filepath."""
+        if df.empty:
+            logger.error("Cannot save empty DataFrame")
+            return ""
+            
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'aoc_rankings_{timestamp}.csv'
+            filepath = os.path.join(self.data_dir, filename)
+            
+            logger.info(f"Saving to {filepath}")
+            df.to_csv(filepath, index=False)
+            
+            if os.path.exists(filepath):
+                logger.info(f"File saved successfully ({os.path.getsize(filepath)} bytes)")
+                return filepath
+            return ""
+            
+        except Exception as e:
+            logger.error(f"Error saving file: {str(e)}")
+            return ""
 
     def get_column_descriptions(self) -> Dict[str, str]:
         """Get descriptions for all columns."""

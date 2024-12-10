@@ -13,6 +13,16 @@ from src.data_processing import (
 )
 from src.utils import suppress_plotly_warnings
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 def init_session_state(df):
     """Initialize session state with default values"""
     if 'reset_counter' not in st.session_state:

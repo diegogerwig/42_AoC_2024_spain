@@ -4,7 +4,14 @@ import plotly.graph_objects as go
 import streamlit as st
 import sys
 import io
-from src.scraper import AOCScraper
+from .scraper import AOCScraper
+import logging
+from datetime import datetime
+import os
+import glob
+from typing import Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 # Define campus color mapping
 CAMPUS_COLORS = {
@@ -14,8 +21,77 @@ CAMPUS_COLORS = {
     'MAD': '#FF00FF'   # Magenta
 }
 
+def clean_old_files(except_file: str):
+    """
+    Remove all CSV files except the specified one.
+    
+    Args:
+        except_file: Full path of the file to keep
+    """
+    try:
+        data_dir = './data'
+        csv_files = glob.glob(os.path.join(data_dir, 'aoc_rankings_*.csv'))
+        
+        deleted_count = 0
+        for file in csv_files:
+            if file != except_file:
+                try:
+                    os.remove(file)
+                    deleted_count += 1
+                    logger.info(f"Deleted old file: {file}")
+                except Exception as e:
+                    logger.error(f"Error deleting {file}: {str(e)}")
+        
+        if deleted_count > 0:
+            logger.info(f"Cleaned up {deleted_count} old CSV files")
+            
+    except Exception as e:
+        logger.error(f"Error during cleanup: {str(e)}")
+
+def get_latest_csv() -> Tuple[str, Optional[datetime]]:
+    """
+    Get the most recent CSV file from the data directory.
+    Returns (filepath, datetime) or ('', None) if no files found.
+    """
+    try:
+        data_dir = './data'
+        csv_files = glob.glob(os.path.join(data_dir, 'aoc_rankings_*.csv'))
+        
+        if not csv_files:
+            logger.warning("No CSV files found in data directory")
+            return '', None
+            
+        # Get the latest file based on filename timestamp
+        latest_file = max(csv_files)
+        
+        # Extract timestamp from filename
+        timestamp_str = os.path.basename(latest_file).split('_')[1].split('.')[0]
+        timestamp = datetime.strptime(timestamp_str, '%Y%m%d%H%M%S')
+        
+        logger.info(f"Found latest backup file: {latest_file} from {timestamp}")
+        return latest_file, timestamp
+        
+    except Exception as e:
+        logger.error(f"Error finding latest CSV: {str(e)}")
+        return '', None
+
+def load_backup_data() -> Optional[pd.DataFrame]:
+    """Load data from the most recent CSV file."""
+    filepath, timestamp = get_latest_csv()
+    if not filepath:
+        return None
+        
+    try:
+        logger.info(f"Loading backup data from {filepath}")
+        df = pd.read_csv(filepath)
+        logger.info(f"Successfully loaded backup with {len(df)} records")
+        return df
+    except Exception as e:
+        logger.error(f"Error loading backup data: {str(e)}")
+        return None
+
 def load_data():
-    """Load and cache data from scraper silently"""
+    """Load and cache data from scraper, falling back to backup CSV if scraping fails"""
     @st.cache_data(ttl=300)  # Cache for 5 minutes
     def _load():
         # Temporarily redirect stdout to capture scraper output
@@ -23,17 +99,42 @@ def load_data():
         sys.stdout = io.StringIO()
         
         try:
+            logger.info("Starting data load")
             scraper = AOCScraper()
             df = scraper.scrape_data()
             
-            # Reset stdout
-            sys.stdout = old_stdout
+            if df.empty:
+                logger.warning("Scraping failed, attempting to load backup data")
+                df = load_backup_data()
+                if df is not None:
+                    logger.info("Successfully loaded backup data")
+                    st.warning("Could not fetch new data. Showing latest saved data.")
+                else:
+                    logger.error("Both scraping and backup loading failed")
+                    st.error("Could not fetch new data or load backup.")
+            else:
+                # Save the fresh data
+                filepath = scraper.save_data(df)
+                if filepath:
+                    logger.info(f"Fresh data saved to {filepath}")
+                    # Clean up old files after successful save
+                    clean_old_files(filepath)
             
-            return df.sort_values('points', ascending=False).reset_index(drop=True)
+            return df.sort_values('points', ascending=False).reset_index(drop=True) if df is not None else pd.DataFrame()
+            
         except Exception as e:
-            # Reset stdout even if there's an error
+            logger.error(f"Error in data loading: {str(e)}")
+            # Try to load backup data in case of error
+            df = load_backup_data()
+            if df is not None:
+                logger.info("Successfully loaded backup data after error")
+                st.warning("Could not fetch new data. Showing latest saved data.")
+                return df.sort_values('points', ascending=False).reset_index(drop=True)
+            return pd.DataFrame()
+            
+        finally:
+            # Always restore stdout
             sys.stdout = old_stdout
-            raise e
     
     return _load()
 
