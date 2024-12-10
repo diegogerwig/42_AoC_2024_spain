@@ -26,6 +26,6 @@ scipy>=1.10.0
 
 # Build tools
 setuptools>=68.0.0
-# wheel>=0.41.0
 
-
+# Encryption
+cryptography

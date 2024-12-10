@@ -21,6 +21,7 @@ CAMPUS_COLORS = {
     'MAD': '#FF00FF'   # Magenta
 }
 
+
 def clean_old_files(except_file: str):
     """
     Remove all CSV files except the specified one.
