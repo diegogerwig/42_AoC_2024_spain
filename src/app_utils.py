@@ -1,5 +1,4 @@
 import warnings
-import pandas as pd
 
 def suppress_plotly_warnings():
     warnings.filterwarnings('ignore', category=FutureWarning, 

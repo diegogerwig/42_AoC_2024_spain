@@ -28,4 +28,4 @@ scipy>=1.10.0
 setuptools>=68.0.0
 
 # Encryption
-cryptography
+cryptography==36.0.0

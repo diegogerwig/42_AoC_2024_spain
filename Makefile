@@ -54,10 +54,6 @@ install:
 	@$(VENV_BIN)/$(PIP) install -r $(REQUIREMENTS)
 	@echo "$(GREEN)Installation complete!$(NC)"
 
-# run: check-venv
-# 	@echo "$(GREEN)Starting Streamlit application...$(NC)"
-# 	@cd $(PWD) && PYTHONPATH=$(PWD) $(VENV_BIN)/$(STREAMLIT) run $(APP)
-
 run: check-venv
 	@echo "$(GREEN)Starting Streamlit application...$(NC)"
 	@cd "$(CURRENT_DIR)" && PYTHONPATH="$(CURRENT_DIR)" $(VENV_BIN)/$(STREAMLIT) run "$(APP)"
