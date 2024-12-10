@@ -5,7 +5,6 @@ STREAMLIT = streamlit
 VENV = $(HOME)/.virtualenvs/42aoc
 VENV_BIN = $(VENV)/bin
 REQUIREMENTS = requirements.txt
-SRC_DIR = src
 APP = app.py
 CURRENT_DIR = $(shell pwd)
 
@@ -23,9 +22,6 @@ help:
 	@echo "$(YELLOW)make install$(NC)     - Create virtual environment and install dependencies"
 	@echo "$(YELLOW)make run$(NC)         - Run the Streamlit application"
 	@echo "$(YELLOW)make clean$(NC)       - Remove cache files"
-	@echo "$(YELLOW)make test$(NC)        - Run tests with coverage"
-	@echo "$(YELLOW)make format$(NC)      - Format code with black"
-	@echo "$(YELLOW)make lint$(NC)        - Run pylint"
 	@echo "$(YELLOW)make local$(NC)       - Clean, install and run"
 
 system-deps:
@@ -60,30 +56,10 @@ run: check-venv
 
 clean:
 	@echo "$(GREEN)Cleaning cache files...$(NC)"
-	@rm -rf __pycache__
-	@rm -rf .pytest_cache
-	@rm -rf $(SRC_DIR)/__pycache__
-	@rm -rf *.egg-info
-	@rm -rf .coverage
-	@find $(PWD)/$(SRC_DIR) -type f -name "*.pyc" -delete 2>/dev/null || true
-	@find $(PWD)/$(SRC_DIR) -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@echo "$(GREEN)Clean complete!$(NC)"
-
-test: check-venv
-	@echo "$(GREEN)Running tests...$(NC)"
-	@$(VENV_BIN)/$(PIP) install pytest pytest-cov
-	@PYTHONPATH=$(PWD) $(VENV_BIN)/pytest tests/ -v --cov=$(SRC_DIR) --cov-report=term-missing
-
-format: check-venv
-	@echo "$(GREEN)Formatting code...$(NC)"
-	@$(VENV_BIN)/$(PIP) install black
-	@$(VENV_BIN)/black $(SRC_DIR) tests $(APP)
-
-lint: check-venv
-	@echo "$(GREEN)Running linter...$(NC)"
-	@$(VENV_BIN)/$(PIP) install pylint
-	@$(VENV_BIN)/pylint $(SRC_DIR)/*.py $(APP)
 
 local: clean install run
 
-.PHONY: help system-deps install run clean test format lint local check-venv
+.PHONY: help system-deps install run clean local check-venv

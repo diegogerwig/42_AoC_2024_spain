@@ -1,27 +1,34 @@
-# 42 AOC 2024 Spain Data Analyzer
+# 42 Spain | Advent of Code 2024 Dashboard
 
-A data analysis tool for 42 Spain Advent of Code rankings.
+A Streamlit dashboard for analyzing and visualizing 42 Spain's Advent of Code 2024 rankings data.
 
-## Features
+## 🌟 Features
 
-- Web scraping of AOC rankings
-- Statistical analysis of student performance
-- Interactive visualizations
-- Real-time data updates
-- Comprehensive test coverage
+- Real-time scraping of AOC rankings from 42 Barcelona's website
+- Campus-specific performance metrics
+- Interactive data filtering and sorting
+- Comprehensive visualizations:
+  - Star distribution analysis
+  - Progress tracking
+  - Campus comparisons
+  - Points distribution
+  - Success rates
+- Performance metrics by campus
+- Detailed ranking tables
+- Data caching for improved performance
 
-## Requirements
+## 🛠️ Requirements
 
 - Python 3.10+
 - Virtual environment support
 - Make (for build automation)
 
-## Installation
+## 📦 Installation
 
 1. Clone the repository:
 ```bash
-git clone 
-cd 42_aoc_analyzer
+git clone https://github.com/diegogerwig/42_AoC_2024_spain.git
+cd 42_AoC_2024_spain
 ```
 
 2. Install system dependencies:
@@ -34,61 +41,53 @@ make system-deps
 make install
 ```
 
-## Usage
+## 🚀 Usage
 
-Run the application:
+Run the dashboard:
 ```bash
 make run
 ```
 
-Run tests:
+For a complete setup and run:
 ```bash
-make test
+make local
 ```
 
-## Development
+## 📁 Project Structure
 
-- `make clean`: Clean temporary files
-- `make test`: Run tests with coverage
-- `make format`: Format code using black
-- `make lint`: Run linter checks
-
-## Project Structure
-
-- `src/`: Source code
-  - `scraper.py`: Data collection
-  - `analyzer.py`: Data analysis
-  - `visualizer.py`: Data visualization
-- `tests/`: Test files
-- `app.py`: Streamlit application
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-
-MIT License
-
-## Project Structure
-
-42_AoC_2024_data/
+```
+42_AoC_2024_spain/
 ├── src/
 │   ├── __init__.py
 │   ├── scraper.py         # Data scraping functionality
-│   ├── analyzer.py        # Statistical analysis
-│   └── visualizer.py      # Data visualization
-├── tests/
-│   ├── __init__.py
-│   ├── test_scraper.py
-│   ├── test_analyzer.py
-│   └── test_visualizer.py
+│   ├── app_utils.py       # Utility functions
+│   ├── app_operations.py  # Dashboard operations
+│   └── app_visualization.py # Data visualization
+├── data/                  # Data storage (gitignored)
 ├── app.py                 # Streamlit application
 ├── requirements.txt       # Project dependencies
 ├── Makefile              # Build automation
-├── README.md             # Project documentation
-└── LICENSE
+└── README.md             # Project documentation
+```
+
+## 🧹 Maintenance
+
+Clean temporary files and caches:
+```bash
+make clean
+```
+
+## 👨‍💻 Development Commands
+
+- `make help`: Show available commands
+- `make system-deps`: Install system dependencies
+- `make install`: Set up virtual environment and install dependencies
+- `make run`: Start the Streamlit dashboard
+- `make clean`: Remove cache files
+- `make local`: Clean, install, and run
+
+## 🤝 Author
+
+Developed by [Diego Gerwig](https://github.com/diegogerwig)
+
+42 Intra Profile: [dgerwig-](https://profile.intra.42.fr/users/dgerwig-)
