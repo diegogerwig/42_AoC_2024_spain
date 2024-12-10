@@ -2,6 +2,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
+import sys
+import io
+from src.scraper import AOCScraper
 
 # Define campus color mapping
 CAMPUS_COLORS = {
@@ -15,10 +18,6 @@ def load_data():
     """Load and cache data from scraper silently"""
     @st.cache_data(ttl=300)  # Cache for 5 minutes
     def _load():
-        import sys
-        import io
-        from src.scraper import AOCScraper
-        
         # Temporarily redirect stdout to capture scraper output
         old_stdout = sys.stdout
         sys.stdout = io.StringIO()
@@ -38,9 +37,11 @@ def load_data():
     
     return _load()
 
+
 def get_current_aoc_day(df):
     """Get current day based on available day columns"""
     return len([col for col in df.columns if col.startswith('day_')])
+
 
 def create_metrics_dataframe(df, is_global=True):
     """Create a formatted dataframe for metrics"""
@@ -77,6 +78,7 @@ def create_metrics_dataframe(df, is_global=True):
                 'Success Rate': f"{campus_success:.1f}%"
             })
     return pd.DataFrame(data)
+
 
 def plot_stars_distribution(df):
     """Plot distribution of gold and silver stars"""
@@ -202,6 +204,7 @@ def plot_success_rate(df):
     fig.update_layout(height=500, title_x=0.5)
     return fig
 
+
 def plot_points_vs_days(df):
     """Create scatter plot of points vs completed days"""
     df = df.copy()
@@ -220,6 +223,7 @@ def plot_points_vs_days(df):
     
     fig.update_layout(height=500, title_x=0.5)
     return fig
+
 
 def plot_campus_progress(df):
     """Create radar chart of campus performance"""
@@ -261,6 +265,7 @@ def plot_campus_progress(df):
         title_x=0.5
     )
     return fig
+
 
 def plot_points_distribution(df):
     """Create box plot of points distribution by campus"""
