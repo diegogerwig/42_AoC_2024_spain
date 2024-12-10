@@ -417,13 +417,31 @@ def main():
         st.markdown(
             """
             ---
+            <style>
+                .custom-link {
+                    color: #fff; 
+                    text-decoration: none; 
+                }
+                .custom-link img {
+                    background: transparent; 
+                    vertical-align: middle; 
+                    padding-right: 4px; 
+                }
+            </style>
             <div style="text-align: center; font-size: 1.1em; padding: 8px; background-color: #333; color: #fff; border-radius: 4px;">
-                Developed by <a href="https://github.com/diegogerwig" target="_blank" style="color: #fff;"><img src="https://github.com/fluidicon.png" height="16" style="vertical-align:middle; padding-right: 4px;"/>Diego Gerwig</a> |
-                <a href="https://profile.intra.42.fr/users/dgerwig-" target="_blank" style="color: #fff;"><img src="https://logowik.com/content/uploads/images/423918.logowik.com.webp" height="16" style="vertical-align:middle; padding-right: 4px;"/>dgerwig-</a> | 2024
+                Developed by 
+                <a href="https://github.com/diegogerwig" target="_blank" class="custom-link">
+                    <img src="https://github.com/fluidicon.png" height="16"/>Diego Gerwig
+                </a> |
+                <a href="https://profile.intra.42.fr/users/dgerwig-" target="_blank" class="custom-link">
+                    <img src="https://logowik.com/content/uploads/images/423918.logowik.com.webp" height="16"/>dgerwig-
+                </a> | 
+                <span style="color: #fff;">2024</span>
             </div>
             """,
             unsafe_allow_html=True
         )
+
 
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
