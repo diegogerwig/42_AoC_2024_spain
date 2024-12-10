@@ -383,14 +383,14 @@ def main():
 
         # Visualizations
         st.markdown("---")
-        tab1, tab2, tab3 = st.tabs(["📈 Star Analysis", "🌟 Progress Tracking", "📊 Campus Comparison"])
+        tab1, tab2, tab3 = st.tabs(["📊 Campus Comparison", "🌟 Progress Tracking", "📈 Star Analysis"])
         
         with tab1:
             col1, col2 = st.columns(2)
-            with col1:
-                st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_star_totals_by_campus(filtered_df), use_container_width=True)
+                st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
+            with col1:
+                st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
         
         with tab2:
             col1, col2 = st.columns(2)
@@ -398,14 +398,17 @@ def main():
                 st.plotly_chart(plot_success_rate(filtered_df), use_container_width=True)
             with col2:
                 st.plotly_chart(plot_points_vs_days(filtered_df), use_container_width=True)
-        
+
         with tab3:
             col1, col2 = st.columns(2)
-            with col1:
-                st.plotly_chart(plot_campus_progress(filtered_df), use_container_width=True)
             with col2:
-                st.plotly_chart(plot_points_distribution(filtered_df), use_container_width=True)
+                st.plotly_chart(plot_stars_distribution(filtered_df), use_container_width=True)
+            with col1:
+                st.plotly_chart(plot_star_totals_by_campus(filtered_df), use_container_width=True)
         
+
+        
+
         # Detailed Data
         st.markdown("---")
         st.subheader("🔍 Detailed Data")
