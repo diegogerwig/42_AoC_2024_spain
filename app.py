@@ -3,7 +3,6 @@ import pandas as pd
 from src.app_utils import *
 from src.app_operations import *
 from src.app_visualization import *
-
 import logging
 
 # Configure logging
