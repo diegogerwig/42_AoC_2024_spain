@@ -6,6 +6,7 @@ VENV = $(HOME)/.virtualenvs/42aoc
 VENV_BIN = $(VENV)/bin
 REQUIREMENTS = requirements.txt
 APP = app.py
+ANALYTICS_APP = ./analytics/analytics_viewer.py
 CURRENT_DIR = $(shell pwd)
 
 # Colors for pretty printing
@@ -61,5 +62,17 @@ clean:
 	@echo "$(GREEN)Clean complete!$(NC)"
 
 local: clean install run
+
+analytics: check-venv
+	@echo "$(GREEN)Starting Analytics Dashboard...$(NC)"
+	@if [ ! -d "analytics/analytics_data" ]; then \
+		echo "$(YELLOW)Creating analytics data directory...$(NC)"; \
+		mkdir -p analytics/analytics_data; \
+	fi
+	@if [ ! -d "analytics/logs" ]; then \
+		echo "$(YELLOW)Creating analytics logs directory...$(NC)"; \
+		mkdir -p analytics/logs; \
+	fi
+	@cd "$(CURRENT_DIR)" && PYTHONPATH="$(CURRENT_DIR)" $(VENV_BIN)/$(STREAMLIT) run "$(ANALYTICS_APP)"
 
 .PHONY: help system-deps install run clean local check-venv

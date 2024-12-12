@@ -5,6 +5,9 @@ from src.app_operations import *
 from src.app_visualization import *
 import logging
 
+from analytics.analytics_logger import AnalyticsLogger
+analytics = AnalyticsLogger()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -160,6 +163,12 @@ def apply_filters(df):
 
 
 def main():
+    # Inicializa el analytics
+    analytics = AnalyticsLogger()
+    
+    # Registra la vista de página
+    analytics.log_event('page_view', 'main')
+
     suppress_plotly_warnings()
     st.set_page_config(page_title="🎄 42 Spain AoC 2024", layout="wide")
     
@@ -167,6 +176,13 @@ def main():
     
     try:
         df = load_data()
+
+        init_session_state(df)
+        if 'filter_state' in st.session_state:
+            analytics.log_event('filter', ('campus', st.session_state.filter_state['campus']))
+            analytics.log_event('filter', ('points_range', st.session_state.filter_state['points_range']))
+            analytics.log_event('filter', ('search_login', st.session_state.filter_state['search_login']))
+        
         filtered_df = apply_filters(df)
 
         # Table styling
@@ -445,8 +461,8 @@ def main():
             unsafe_allow_html=True
         )
 
-
     except Exception as e:
+        analytics.log_event('error', str(e))
         st.error(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":

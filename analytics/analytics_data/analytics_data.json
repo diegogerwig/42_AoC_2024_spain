@@ -1,0 +1,32 @@
+{
+  "page_views": {
+    "main": 4
+  },
+  "button_clicks": {},
+  "filter_usage": {
+    "campus": [
+      {
+        "value": "All",
+        "timestamp": "2024-12-12T15:37:18.220574"
+      }
+    ],
+    "points_range": [
+      {
+        "value": [
+          0.0,
+          668.5
+        ],
+        "timestamp": "2024-12-12T15:37:18.233688"
+      }
+    ],
+    "search_login": [
+      {
+        "value": "",
+        "timestamp": "2024-12-12T15:37:18.248652"
+      }
+    ]
+  },
+  "search_queries": [],
+  "session_data": [],
+  "errors": []
+}
