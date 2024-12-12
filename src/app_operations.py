@@ -146,32 +146,46 @@ def create_metrics_dataframe(df, is_global=True):
     max_possible_stars = current_day * 2
 
     if is_global:
-        success_rate = (df['total_stars'].sum() / (len(df) * max_possible_stars)) * 100
+        total_users = len(df)
+        active_users = len(df[df['points'] > 0])
+        total_stars = df['total_stars'].sum()
         
-        data = {
-            'Section': ['🌍 Global'],
-            'Students': [len(df)],
-            'Points (Avg / Max)': [f"{df['points'].mean():.1f} / {df['points'].max():.1f}"],
-            'Streak (Avg / Max)': [f"{df['streak'].mean():.1f} / {df['streak'].max()}"],
-            'Stars (Gold / Silver)': [f"{int(df['gold_stars'].sum())} / {int(df['silver_stars'].sum())}"],
-            'Success Rate': [f"{success_rate:.1f}%"]
-        }
+        participation_rate = (active_users / total_users * 100) if total_users > 0 else 0
+        total_success_rate = (total_stars / (total_users * max_possible_stars)) * 100
+        active_success_rate = (total_stars / (active_users * max_possible_stars)) * 100 if active_users > 0 else 0
+        
+        data = [{
+            'Section': '🌍 Global',
+            'Students (Total / Active)': f"{total_users} / {active_users}",
+            'Participation': f"{participation_rate:.1f}%",
+            'Points (Avg / Max)': f"{df['points'].mean():.1f} / {df['points'].max():.1f}",
+            'Streak (Avg / Max)': f"{df['streak'].mean():.1f} / {df['streak'].max()}",
+            'Stars (Gold / Silver)': f"{int(df['gold_stars'].sum())} / {int(df['silver_stars'].sum())}",
+            'Success Rate (Total / Active)': f"{total_success_rate:.1f}% / {active_success_rate:.1f}%"
+        }]
     else:
         data = []
         for campus in sorted(df['campus'].unique()):
             campus_data = df[df['campus'] == campus]
-            campus_success = (campus_data['total_stars'].sum() / 
-                           (len(campus_data) * max_possible_stars)) * 100
             
-            # Create colored campus name
+            total_users = len(campus_data)
+            active_users = len(campus_data[campus_data['points'] > 0])
+            total_stars = campus_data['total_stars'].sum()
+            
+            participation_rate = (active_users / total_users * 100) if total_users > 0 else 0
+            total_success_rate = (total_stars / (total_users * max_possible_stars)) * 100
+            active_success_rate = (total_stars / (active_users * max_possible_stars)) * 100 if active_users > 0 else 0
+            
             colored_campus = f"<span style='color: {CAMPUS_COLORS[campus]}'>🏛️ {campus}</span>"
             
             data.append({
                 'Section': colored_campus,
-                'Students': len(campus_data),
+                'Students (Total / Active)': f"{total_users} / {active_users}",
+                'Participation': f"{participation_rate:.1f}%",
                 'Points (Avg / Max)': f"{campus_data['points'].mean():.1f} / {campus_data['points'].max():.1f}",
                 'Streak (Avg / Max)': f"{campus_data['streak'].mean():.1f} / {campus_data['streak'].max()}",
                 'Stars (Gold / Silver)': f"{int(campus_data['gold_stars'].sum())} / {int(campus_data['silver_stars'].sum())}",
-                'Success Rate': f"{campus_success:.1f}%"
+                'Success Rate (Total / Active)': f"{total_success_rate:.1f}% / {active_success_rate:.1f}%"
             })
+
     return pd.DataFrame(data)

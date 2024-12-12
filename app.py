@@ -3,6 +3,7 @@ import pandas as pd
 from src.app_utils import *
 from src.app_operations import *
 from src.app_visualization import *
+from src.app_predictions import *
 import logging
 
 from analytics.analytics_logger import AnalyticsLogger
@@ -287,37 +288,62 @@ def main():
         campus_df = create_metrics_dataframe(filtered_df, is_global=False)
         metrics_df = pd.concat([global_df, campus_df], ignore_index=True)
 
-        # Display combined table with HTML rendering
+        # Define table styles once
+        table_styles = [
+            # Base table style
+            {'selector': 'table', 'props': [
+                ('width', '100%'),
+                ('border-collapse', 'collapse'),
+                ('margin', '0px'),
+                ('table-layout', 'fixed')
+            ]},
+            # Header cells
+            {'selector': 'th', 'props': [
+                ('background-color', '#2E2E2E'),
+                ('color', '#AAAAAA'),
+                ('font-weight', 'normal'),
+                ('padding', '12px 8px'),
+                ('font-size', '0.9em'),
+                ('text-align', 'center'),
+                ('vertical-align', 'middle'),
+                ('border', '1px solid #333'),
+                ('line-height', '1.2'),
+                ('white-space', 'normal')
+            ]},
+            # Data cells
+            {'selector': 'td', 'props': [
+                ('background-color', '#1E1E1E'),
+                ('color', 'white'),
+                ('padding', '8px'),
+                ('text-align', 'center'),
+                ('vertical-align', 'middle'),
+                ('border', '1px solid #333'),
+                ('white-space', 'nowrap')
+            ]},
+            # First row (Global)
+            {'selector': 'tr:first-child td', 'props': [
+                ('background-color', '#2E2E2E'),
+                ('font-weight', 'bold')
+            ]},
+            # Column widths
+            {'selector': 'td:nth-child(1), th:nth-child(1)', 'props': [('width', '16%')]},  # Section
+            {'selector': 'td:nth-child(2), th:nth-child(2)', 'props': [('width', '14%')]},  # Students
+            {'selector': 'td:nth-child(3), th:nth-child(3)', 'props': [('width', '12%')]},  # Participation
+            {'selector': 'td:nth-child(4), th:nth-child(4)', 'props': [('width', '14%')]},  # Points
+            {'selector': 'td:nth-child(5), th:nth-child(5)', 'props': [('width', '14%')]},  # Streak
+            {'selector': 'td:nth-child(6), th:nth-child(6)', 'props': [('width', '14%')]},  # Stars
+            {'selector': 'td:nth-child(7), th:nth-child(7)', 'props': [('width', '16%')]},  # Success Rate
+            # First column alignment
+            {'selector': 'td:first-child, th:first-child', 'props': [
+                ('text-align', 'left'),
+                ('padding-left', '15px')
+            ]}
+        ]
+
+        # Display styled table
         st.markdown(
             metrics_df.style
-            .set_table_styles([
-                {'selector': 'th', 'props': [
-                    ('background-color', '#2E2E2E'),
-                    ('color', '#AAAAAA'),
-                    ('font-weight', 'normal'),
-                    ('padding', '8px'),
-                    ('font-size', '0.9em'),
-                    ('text-align', 'center'),
-                    ('vertical-align', 'middle')
-                ]},
-                {'selector': 'td', 'props': [
-                    ('background-color', '#1E1E1E'),
-                    ('color', 'white'),
-                    ('padding', '8px'),
-                    ('text-align', 'center'),
-                    ('vertical-align', 'middle')
-                ]},
-                {'selector': 'tr:first-child td', 'props': [
-                    ('background-color', '#2E2E2E'),
-                    ('font-weight', 'bold')
-                ]},
-                {'selector': 'td:nth-child(1)', 'props': [('width', '20%')]},
-                {'selector': 'td:nth-child(2)', 'props': [('width', '15%')]},
-                {'selector': 'td:nth-child(3)', 'props': [('width', '15%')]},
-                {'selector': 'td:nth-child(4)', 'props': [('width', '15%')]},
-                {'selector': 'td:nth-child(5)', 'props': [('width', '15%')]},
-                {'selector': 'td:nth-child(6)', 'props': [('width', '15%')]},
-            ])
+            .set_table_styles(table_styles)
             .hide(axis="index")
             .to_html(escape=False),
             unsafe_allow_html=True
@@ -349,6 +375,10 @@ def main():
                 'Silver Stars': f'<div style="text-align: center">{first_student["silver_stars"]}</div>',
                 'Streak': f'<div style="text-align: center">{first_student["streak"]}</div>',
                 'Number of Students': f'<div style="text-align: center">{len(students)}</div>',
+                'BCN Students': f'<div style="text-align: center">{len(students.loc[students["campus"] == "BCN"])}</div>',
+                'MAD Students': f'<div style="text-align: center">{len(students.loc[students["campus"] == "MAD"])}</div>',
+                'MAL Students': f'<div style="text-align: center">{len(students.loc[students["campus"] == "MAL"])}</div>',
+                'UDZ Students': f'<div style="text-align: center">{len(students.loc[students["campus"] == "UDZ"])}</div>',
                 'Students': '  ||  '.join(colored_logins),
             })
 
@@ -382,13 +412,17 @@ def main():
                     ('font-size', '1.2em'),
                     ('width', '5%')
                 ]},
-                {'selector': 'td:nth-child(1)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(2)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(3)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(4)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(5)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(6)', 'props': [('width', '8%')]},
-                {'selector': 'td:nth-child(7)', 'props': [('width', '50%')]}
+                {'selector': 'td:nth-child(1)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(2)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(3)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(4)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(5)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(6)', 'props': [('width', '6%')]},
+                {'selector': 'td:nth-child(7)', 'props': [('width', '4%')]},
+                {'selector': 'td:nth-child(8)', 'props': [('width', '4%')]},
+                {'selector': 'td:nth-child(9)', 'props': [('width', '4%')]},
+                {'selector': 'td:nth-child(10)', 'props': [('width', '4%')]},
+                {'selector': 'td:nth-child(11)', 'props': [('width', '40%')]}
             ])
             .hide(axis="index")
             .to_html(escape=False),
@@ -398,7 +432,7 @@ def main():
 
         # Visualizations
         st.markdown("---")
-        tab1, tab2, tab3 = st.tabs(["📊 Campus Comparison", "🌟 Progress Tracking", "📈 Star Analysis"])
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Campus Comparison", "🌟 Progress Tracking", "📈 Star Analysis", "🔮 Predictions"])
         
         with tab1:
             col1, col2 = st.columns(2)
@@ -421,9 +455,38 @@ def main():
             with col1:
                 st.plotly_chart(plot_star_totals_by_campus(filtered_df), use_container_width=True)
         
+        with tab4:
+            st.subheader("🔮 ML Predictions by Campus")
+            
+            # Display prediction metrics
+            st.markdown("### 📊 Prediction Metrics")
+            prediction_metrics = create_prediction_metrics(filtered_df)
+            st.dataframe(prediction_metrics, use_container_width=True)
 
+            # Display model metrics
+            st.markdown("### 🔬 Model Evaluation Metrics")
+            model_metrics = create_model_metrics(filtered_df)
+            st.dataframe(model_metrics, use_container_width=True)
+            
+            # Display prediction visualization
+            st.markdown("### 📈 Current vs Predicted Points")
+            st.plotly_chart(plot_predictions(filtered_df), use_container_width=True)
+            
+            # Add explanation
+            st.markdown("""
+            **About these predictions:**
+            * Predictions are based on the success rate of active users
+            * The model uses linear regression on the last 5 days to identify recent trends
+            * Success rate = (obtained stars) / (possible stars from active users) × 100
+            * Model quality metrics:
+            * R² Score: How well the model fits the data (closer to 1 is better)
+            * RMSE: Average prediction error in percentage points
+            * MAE: Average absolute error in percentage points
+            * Part. Rate: Percentage of total users active on the current day
+            * Each active user can earn up to 2 stars per day (1 star = completed late, 2 stars = completed on time)
+            * Projections follow current trends but actual results may vary
+            """)
         
-
         # Detailed Data
         st.markdown("---")
         st.subheader("🔍 Detailed Data")

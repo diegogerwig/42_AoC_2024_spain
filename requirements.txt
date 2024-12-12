@@ -29,3 +29,6 @@ setuptools>=68.0.0
 
 # Encryption
 cryptography==36.0.0
+
+# Machine learning
+scikit-learn>=1.4.0

@@ -1,4 +1,5 @@
 _Trash/
+tests/
 data/*.csv
 
 # Byte-compiled / optimized / DLL files

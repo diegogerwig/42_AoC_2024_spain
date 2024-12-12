@@ -1,6 +1,9 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+import numpy as np
+from scipy import stats
+from plotly.subplots import make_subplots
 
 # Define campus color mapping
 CAMPUS_COLORS = {
@@ -9,6 +12,31 @@ CAMPUS_COLORS = {
     'MAL': '#00FFFF',  # Cyan
     'MAD': '#FF00FF'   # Magenta
 }
+
+MILESTONE_POINTS = {
+    'Bronze': 25,
+    'Silver': 50,
+    'Gold': 75,
+    'Platinum': 100
+}
+
+MILESTONE_COLORS = {
+    'Bronze': '#CD7F32',
+    'Silver': '#C0C0C0',
+    'Gold': '#FFD700',
+    'Platinum': '#E5E4E2'
+}
+
+def get_milestone_status(points):
+    if points >= MILESTONE_POINTS['Platinum']:
+        return 'Platinum'
+    elif points >= MILESTONE_POINTS['Gold']:
+        return 'Gold'
+    elif points >= MILESTONE_POINTS['Silver']:
+        return 'Silver'
+    elif points >= MILESTONE_POINTS['Bronze']:
+        return 'Bronze'
+    return 'None'
 
 
 # Define common styling
@@ -279,4 +307,153 @@ def plot_points_distribution(df):
     )
     
     fig.update_layout(showlegend=False)
+    return fig
+
+
+def plot_achievement_prediction(df):
+    """
+    Create a visualization of predicted achievements and milestones
+    """
+    # Calculate current rates and predictions
+    avg_points_per_day = df['points'].sum() / df['completed_days'].sum()
+    current_max_points = df['points'].max()
+    days_remaining = 25 - df['completed_days'].max()
+    
+    # Create milestone predictions
+    milestones = {
+        'Bronze': {'points': 25, 'color': '#CD7F32'},
+        'Silver': {'points': 50, 'color': '#C0C0C0'},
+        'Gold': {'points': 75, 'color': '#FFD700'},
+        'Platinum': {'points': 100, 'color': '#E5E4E2'}
+    }
+    
+    # Create the visualization
+    fig = go.Figure()
+    
+    # Add current progress gauge
+    fig.add_indicator(
+        mode="gauge+number+delta",
+        value=current_max_points,
+        delta={'reference': avg_points_per_day * 25},
+        gauge={
+            'axis': {'range': [None, 100]},
+            'bar': {'color': "#1f77b4"},
+            'steps': [
+                {'range': [0, 25], 'color': milestones['Bronze']['color']},
+                {'range': [25, 50], 'color': milestones['Silver']['color']},
+                {'range': [50, 75], 'color': milestones['Gold']['color']},
+                {'range': [75, 100], 'color': milestones['Platinum']['color']}
+            ],
+            'threshold': {
+                'line': {'color': "white", 'width': 4},
+                'thickness': 0.75,
+                'value': avg_points_per_day * 25
+            }
+        },
+        title={'text': "Projected Final Score"}
+    )
+    
+    return fig
+
+
+def plot_milestone_timeline(df):
+    """
+    Create an interactive timeline of predicted milestone achievements
+    """
+    # Calculate current progress and rates
+    current_day = df['completed_days'].max()
+    avg_points_per_day = df['points'].mean() / df['completed_days'].mean()
+    
+    # Create timeline data
+    timeline_data = []
+    current_points = df['points'].max()
+    
+    for day in range(current_day, 26):
+        projected_points = current_points + (avg_points_per_day * (day - current_day))
+        timeline_data.append({
+            'day': day,
+            'points': projected_points,
+            'milestone': get_milestone_status(projected_points)
+        })
+    
+    # Create the visualization
+    fig = go.Figure()
+    
+    # Add milestone zones
+    fig.add_scatter(
+        x=[d['day'] for d in timeline_data],
+        y=[d['points'] for d in timeline_data],
+        mode='lines+markers',
+        name='Projected Progress',
+        line=dict(color='white', width=2),
+        marker=dict(
+            size=10,
+            color=[MILESTONE_COLORS[d['milestone']] for d in timeline_data],
+            symbol='diamond'
+        )
+    )
+    
+    # Add milestone lines
+    for milestone, points in MILESTONE_POINTS.items():
+        fig.add_hline(
+            y=points,
+            line_dash="dash",
+            line_color=MILESTONE_COLORS[milestone],
+            annotation_text=milestone
+        )
+    
+    fig.update_layout(
+        title='Milestone Achievement Timeline',
+        xaxis_title='Day',
+        yaxis_title='Points',
+        template='plotly_dark',
+        showlegend=True
+    )
+    
+    return fig
+
+
+def plot_team_race(df):
+    """
+    Create a racing bar chart showing predicted campus rankings
+    """
+    # Calculate campus rates and projections
+    campus_stats = df.groupby('campus').agg({
+        'points': 'max',
+        'completed_days': 'max'
+    }).reset_index()
+    
+    campus_stats['rate'] = campus_stats['points'] / campus_stats['completed_days']
+    campus_stats['projected_points'] = campus_stats['points'] + (campus_stats['rate'] * (25 - campus_stats['completed_days']))
+    
+    # Create the visualization
+    fig = go.Figure()
+    
+    # Current standings
+    fig.add_bar(
+        y=campus_stats['campus'],
+        x=campus_stats['points'],
+        orientation='h',
+        name='Current Points',
+        marker_color='lightblue'
+    )
+    
+    # Projected final standings
+    fig.add_bar(
+        y=campus_stats['campus'],
+        x=campus_stats['projected_points'],
+        orientation='h',
+        name='Projected Points',
+        marker_color='rgba(255, 255, 255, 0.3)',
+        base=campus_stats['points']
+    )
+    
+    fig.update_layout(
+        title='Campus Race to Day 25',
+        xaxis_title='Points',
+        template='plotly_dark',
+        barmode='stack',
+        showlegend=True
+    )
+    
     return fig
