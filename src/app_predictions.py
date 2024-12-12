@@ -230,9 +230,9 @@ def create_prediction_metrics(filtered_df):
             'Campus': campus,
             'Active / Total': f"{int(current_stats['active_users'])} / {int(current_stats['total_users'])}",
             'Success Rate': f"{current_stats['success_rate']:.1f}%",
-            'Stars (2★/1★)': f"{int(current_stats['two_stars'])} / {int(current_stats['one_star'])}",
-            'Total Stars': f"{int(current_stats['total_stars'])} / {int(current_stats['possible_stars'])}",
-            'Dec 25 Proj.': f"{final_rate:.1f}%",
+            'Stars (2★ / 1★)': f"{int(current_stats['two_stars'])} / {int(current_stats['one_star'])}",
+            'TODAY Total Stars Get / Possible Stars': f"{int(current_stats['total_stars'])} / {int(current_stats['possible_stars'])}",
+            'Projection (Dec 25)': f"{final_rate:.1f}%",
             'Trend': f"{trend:+.1f}%"
         })
     

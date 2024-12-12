@@ -479,11 +479,10 @@ def main():
             * The model uses linear regression on the last 5 days to identify recent trends
             * Success rate = (obtained stars) / (possible stars from active users) × 100
             * Model quality metrics:
-            * R² Score: How well the model fits the data (closer to 1 is better)
-            * RMSE: Average prediction error in percentage points
-            * MAE: Average absolute error in percentage points
-            * Part. Rate: Percentage of total users active on the current day
-            * Each active user can earn up to 2 stars per day (1 star = completed late, 2 stars = completed on time)
+                * R² Score: How well the model fits the data (closer to 1 is better)
+                * RMSE: Average prediction error in percentage points
+                * MAE: Average absolute error in percentage points
+            * Each active user can earn up to 2 stars per day 
             * Projections follow current trends but actual results may vary
             """)
         
