@@ -534,11 +534,11 @@ def main():
         
         with tab4:
             st.subheader("🔮 ML Predictions by Campus")
-            st.markdown("---")
             
             display_prediction_tables(filtered_df)
 
             # Display prediction metrics
+            st.markdown("---")
             st.markdown("### 📊 Prediction Metrics")
             prediction_metrics = create_prediction_metrics(filtered_df)
             # st.dataframe(prediction_metrics, use_container_width=True)
