@@ -538,12 +538,12 @@ def main():
             # Display prediction metrics
             st.markdown("### 📊 Prediction Metrics")
             prediction_metrics = create_prediction_metrics(filtered_df)
-            st.dataframe(prediction_metrics, use_container_width=True)
+            # st.dataframe(prediction_metrics, use_container_width=True)
 
             # Display model metrics
             st.markdown("### 🔬 Model Evaluation Metrics")
             model_metrics = create_model_metrics(filtered_df)
-            st.dataframe(model_metrics, use_container_width=True)
+            # st.dataframe(model_metrics, use_container_width=True)
             
             # Display prediction visualization
             st.markdown("### 📈 Current vs Predicted Points")
