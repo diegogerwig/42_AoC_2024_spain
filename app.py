@@ -541,12 +541,12 @@ def main():
             # st.dataframe(prediction_metrics, use_container_width=True)
 
             # Display model metrics
-            st.markdown("### 🔬 Model Evaluation Metrics")
+            # st.markdown("### 🔬 Model Evaluation Metrics")
             model_metrics = create_model_metrics(filtered_df)
             # st.dataframe(model_metrics, use_container_width=True)
             
             # Display prediction visualization
-            st.markdown("### 📈 Current vs Predicted Points")
+            # st.markdown("### 📈 Current vs Predicted Points")
             st.plotly_chart(plot_predictions(filtered_df), use_container_width=True)
 
             # Add explanation
