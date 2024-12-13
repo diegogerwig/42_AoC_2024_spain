@@ -206,6 +206,7 @@ def display_prediction_tables(filtered_df):
     # Get prediction metrics
     prediction_metrics = create_prediction_metrics(filtered_df)
     if not prediction_metrics.empty:
+        st.markdown("---")
         st.markdown("### 📊 Prediction Metrics")
         st.markdown(
             prediction_metrics.style
@@ -228,6 +229,7 @@ def display_prediction_tables(filtered_df):
     # Get model metrics
     model_metrics = create_model_metrics(filtered_df)
     if not model_metrics.empty:
+        st.markdown("---")
         st.markdown("### 🔬 Model Evaluation Metrics")
         st.markdown(
             model_metrics.style
@@ -532,10 +534,12 @@ def main():
         
         with tab4:
             st.subheader("🔮 ML Predictions by Campus")
+            st.markdown("---")
             
             display_prediction_tables(filtered_df)
 
             # Display prediction metrics
+            st.markdown("---")
             st.markdown("### 📊 Prediction Metrics")
             prediction_metrics = create_prediction_metrics(filtered_df)
             # st.dataframe(prediction_metrics, use_container_width=True)
