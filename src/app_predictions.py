@@ -221,22 +221,50 @@ def create_prediction_metrics(filtered_df):
         return pd.DataFrame()
     
     metrics_data = []
+    current_day = datetime.now().day
+    
     for campus, pred in predictions.items():
-        final_rate = pred['projected_rates'][-1]
+        # Ensure we're getting the latest actual data
         current_stats = pred['daily_stats'].iloc[-1]
+        
+        # Get the projected rate for December 25th
+        final_rate = pred['projected_rates'][-1]
+        
+        # Calculate trend
         trend = final_rate - current_stats['success_rate']
         
+        # Format numbers carefully to avoid any NaN or invalid values
+        active_users = int(current_stats['active_users']) if pd.notna(current_stats['active_users']) else 0
+        total_users = int(current_stats['total_users']) if pd.notna(current_stats['total_users']) else 0
+        success_rate = float(current_stats['success_rate']) if pd.notna(current_stats['success_rate']) else 0.0
+        two_stars = int(current_stats['two_stars']) if pd.notna(current_stats['two_stars']) else 0
+        one_star = int(current_stats['one_star']) if pd.notna(current_stats['one_star']) else 0
+        total_stars = int(current_stats['total_stars']) if pd.notna(current_stats['total_stars']) else 0
+        possible_stars = int(current_stats['possible_stars']) if pd.notna(current_stats['possible_stars']) else 0
+        
         metrics_data.append({
-            'Campus': campus,
-            'Active / Total': f"{int(current_stats['active_users'])} / {int(current_stats['total_users'])}",
-            'Success Rate': f"{current_stats['success_rate']:.1f}%",
-            'Stars (2★ / 1★)': f"{int(current_stats['two_stars'])} / {int(current_stats['one_star'])}",
-            'TODAY Total Stars Get / Possible Stars': f"{int(current_stats['total_stars'])} / {int(current_stats['possible_stars'])}",
-            'Projection (Dec 25)': f"{final_rate:.1f}%",
+            'Campus': str(campus),
+            'Active / Total': f"{active_users:,d} / {total_users:,d}",
+            'Current Success Rate': f"{success_rate:.1f}%",
+            'Stars Distribution': f"{two_stars:,d}★★ / {one_star:,d}★",
+            f'Day {current_day} Stars': f"{total_stars:,d} / {possible_stars:,d}",
+            'Dec 25 Projection': f"{final_rate:.1f}%",
             'Trend': f"{trend:+.1f}%"
         })
     
-    return pd.DataFrame(metrics_data)
+    # Create DataFrame and set explicit column order
+    df = pd.DataFrame(metrics_data)
+    column_order = [
+        'Campus',
+        'Active / Total',
+        'Current Success Rate',
+        'Stars Distribution',
+        f'Day {current_day} Stars',
+        'Dec 25 Projection',
+        'Trend'
+    ]
+    
+    return df[column_order]
 
 def create_model_metrics(filtered_df):
     """Create a DataFrame with model evaluation metrics"""
@@ -246,17 +274,38 @@ def create_model_metrics(filtered_df):
         return pd.DataFrame()
     
     model_data = []
+    
     for campus, pred in predictions.items():
         model_metrics = pred['model_metrics']
         current_stats = pred['daily_stats'].iloc[-1]
-        participation_rate = (current_stats['active_users'] / current_stats['total_users']) * 100
+        
+        # Safely calculate participation rate
+        total_users = float(current_stats['total_users']) if pd.notna(current_stats['total_users']) else 0
+        active_users = float(current_stats['active_users']) if pd.notna(current_stats['active_users']) else 0
+        
+        participation_rate = (active_users / total_users * 100) if total_users > 0 else 0.0
+        
+        # Safely get model metrics
+        r2 = float(model_metrics['r2_score']) if pd.notna(model_metrics['r2_score']) else 0.0
+        rmse = float(model_metrics['rmse']) if pd.notna(model_metrics['rmse']) else 0.0
+        mae = float(model_metrics['mae']) if pd.notna(model_metrics['mae']) else 0.0
         
         model_data.append({
-            'Campus': campus,
-            'R² Score': f"{model_metrics['r2_score']:.3f}",
-            'RMSE': f"{model_metrics['rmse']:.1f}%",
-            'MAE': f"{model_metrics['mae']:.1f}%",
-            'Part. Rate': f"{participation_rate:.1f}%"
+            'Campus': str(campus),
+            'R² Score': f"{r2:.3f}",
+            'RMSE': f"{rmse:.1f}%",
+            'MAE': f"{mae:.1f}%",
+            'Participation Rate': f"{participation_rate:.1f}%"
         })
     
-    return pd.DataFrame(model_data)
+    # Create DataFrame and set explicit column order
+    df = pd.DataFrame(model_data)
+    column_order = [
+        'Campus',
+        'R² Score',
+        'RMSE',
+        'MAE',
+        'Participation Rate'
+    ]
+    
+    return df[column_order]

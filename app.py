@@ -163,6 +163,81 @@ def apply_filters(df):
     return filtered_df
 
 
+def display_prediction_tables(filtered_df):
+    """Display prediction and model metrics tables with consistent styling"""
+    
+    # Define common table styles
+    table_styles = [
+        {'selector': 'table', 'props': [
+            ('width', '100%'),
+            ('border-collapse', 'collapse'),
+            ('margin', '0px'),
+            ('table-layout', 'fixed')
+        ]},
+        {'selector': 'th', 'props': [
+            ('background-color', '#2E2E2E'),
+            ('color', '#AAAAAA'),
+            ('font-weight', 'normal'),
+            ('padding', '12px 8px'),
+            ('font-size', '0.9em'),
+            ('text-align', 'center'),
+            ('vertical-align', 'middle'),
+            ('border', '1px solid #333')
+        ]},
+        {'selector': 'td', 'props': [
+            ('background-color', '#1E1E1E'),
+            ('color', 'white'),
+            ('padding', '8px'),
+            ('text-align', 'center'),
+            ('vertical-align', 'middle'),
+            ('border', '1px solid #333'),
+            ('white-space', 'nowrap')
+        ]},
+        # Specific width for each column in prediction metrics
+        {'selector': 'td:nth-child(1), th:nth-child(1)', 'props': [('width', '15%')]},  # Campus
+        {'selector': 'td:nth-child(2), th:nth-child(2)', 'props': [('width', '15%')]},  # Active/Total
+        {'selector': 'td:nth-child(3), th:nth-child(3)', 'props': [('width', '15%')]},  # Current Rate
+        {'selector': 'td:nth-child(4), th:nth-child(4)', 'props': [('width', '15%')]},  # Stars
+        {'selector': 'td:nth-child(5), th:nth-child(5)', 'props': [('width', '15%')]},  # Today Stars
+        {'selector': 'td:nth-child(6), th:nth-child(6)', 'props': [('width', '12%')]},  # Projection
+        {'selector': 'td:nth-child(7), th:nth-child(7)', 'props': [('width', '13%')]},  # Trend
+    ]
+
+    # Get prediction metrics
+    prediction_metrics = create_prediction_metrics(filtered_df)
+    if not prediction_metrics.empty:
+        st.markdown("### 📊 Prediction Metrics")
+        st.markdown(
+            prediction_metrics.style
+            .set_table_styles(table_styles)
+            .hide(axis="index")
+            .to_html(escape=False),
+            unsafe_allow_html=True
+        )
+
+    # Adjust styles for model metrics table (fewer columns)
+    model_table_styles = table_styles.copy()
+    model_table_styles.extend([
+        {'selector': 'td:nth-child(1), th:nth-child(1)', 'props': [('width', '20%')]},  # Campus
+        {'selector': 'td:nth-child(2), th:nth-child(2)', 'props': [('width', '20%')]},  # R² Score
+        {'selector': 'td:nth-child(3), th:nth-child(3)', 'props': [('width', '20%')]},  # RMSE
+        {'selector': 'td:nth-child(4), th:nth-child(4)', 'props': [('width', '20%')]},  # MAE
+        {'selector': 'td:nth-child(5), th:nth-child(5)', 'props': [('width', '20%')]},  # Part. Rate
+    ])
+
+    # Get model metrics
+    model_metrics = create_model_metrics(filtered_df)
+    if not model_metrics.empty:
+        st.markdown("### 🔬 Model Evaluation Metrics")
+        st.markdown(
+            model_metrics.style
+            .set_table_styles(model_table_styles)
+            .hide(axis="index")
+            .to_html(escape=False),
+            unsafe_allow_html=True
+        )
+
+
 def main():
     # Inicializa el analytics
     analytics = AnalyticsLogger()
@@ -458,6 +533,8 @@ def main():
         with tab4:
             st.subheader("🔮 ML Predictions by Campus")
             
+            display_prediction_tables(filtered_df)
+
             # Display prediction metrics
             st.markdown("### 📊 Prediction Metrics")
             prediction_metrics = create_prediction_metrics(filtered_df)
@@ -471,7 +548,7 @@ def main():
             # Display prediction visualization
             st.markdown("### 📈 Current vs Predicted Points")
             st.plotly_chart(plot_predictions(filtered_df), use_container_width=True)
-            
+
             # Add explanation
             st.markdown("""
             **About these predictions:**
